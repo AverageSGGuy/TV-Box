@@ -56,7 +56,7 @@ select,input[type=text],input[type=url],textarea{background:var(--bg);border:1px
 .app.nomenu{grid-template-columns:1fr}.app.nomenu .rail{display:none}
 .float{position:absolute;top:10px;left:10px;display:flex;gap:6px;z-index:2;opacity:.5;transition:opacity .2s}.float:hover,.float:focus-within{opacity:1}
 .float button{background:rgba(18,21,27,.85);border:1px solid var(--line);border-radius:8px;width:36px;height:36px;cursor:pointer;font-size:16px}
-body.fs .info,body.fs #menub,body.fs .rail{display:none}body.fs .app{grid-template-columns:1fr}body.fs .video{flex:1;aspect-ratio:auto}
+
 @media (max-width:760px){
  .app{grid-template-columns:1fr;grid-template-rows:auto 1fr}
  .stage{order:-1}.video{flex:none;aspect-ratio:16/9}
@@ -81,7 +81,19 @@ textarea{border-radius:14px}.rail-top .icon-btn{padding:6px 10px;font-size:14px}
 .float button{background:rgba(255,255,255,.16);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border-radius:50%;border-color:rgba(255,255,255,.3)}
 .modal{-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
 .mv{display:flex;gap:3px}.mv span{width:26px;height:26px;display:grid;place-items:center;border-radius:50%;background:rgba(255,255,255,.12);font-size:12px}.mv span:hover{background:rgba(255,255,255,.28)}
-body.fs .app{padding:0;gap:0}body.fs .video{border-radius:0;box-shadow:none}body.fs::before{display:none}
+/* full-bleed layout */
+body::before{display:none}
+.app{display:block;position:fixed;inset:0;padding:0;gap:0;--ih:96px}
+.stage{position:fixed;inset:0;display:block;z-index:1;gap:0}
+.video{position:absolute;inset:0;flex:none;aspect-ratio:auto;border-radius:0;box-shadow:none;background:#000}
+.scrim{position:absolute;inset:0;z-index:1;display:none}.app.menu .scrim{display:block}
+.edge{position:absolute;left:0;top:0;bottom:0;width:16px;z-index:2}
+.float{z-index:4;left:auto;right:12px}
+.rail{position:absolute;z-index:5;left:14px;top:14px;bottom:calc(var(--ih) + 28px);width:min(340px,calc(100% - 28px));transform:translateX(calc(-100% - 20px));opacity:0;pointer-events:none;transition:transform .3s,opacity .3s}
+.app.menu .rail{transform:none;opacity:1;pointer-events:auto}
+.info{position:absolute;z-index:3;left:14px;right:14px;bottom:14px;opacity:0;transform:translateY(20px);pointer-events:none;transition:transform .3s,opacity .3s}
+.app.menu .info,.app.hud .info{opacity:1;transform:none}.app.menu .info{pointer-events:auto}
+@media (max-width:760px){.app{--ih:190px}}
 </style>
 </head>
 <body>
@@ -95,6 +107,7 @@ body.fs .app{padding:0;gap:0}body.fs .video{border-radius:0;box-shadow:none}body
  <main class="stage">
   <div class="float"><button id="menub" aria-label="Show or hide menu" title="Menu (M)">☰</button><button id="fsb" aria-label="Full screen" title="Full screen (F)">⛶</button></div>
   <div class="video" id="video"></div>
+  <div class="scrim" id="scrim"></div><div class="edge" id="edge"></div>
   <div class="info">
    <div class="num" id="inum"></div>
    <div><h2 id="iname"></h2><div class="d" id="idesc"></div></div>
@@ -171,7 +184,7 @@ function play(id,user){const a=all();cur=a.find(c=>c.id===id)||a[0];if(!cur){$('
  if(y){const vq={1080:'hd1080',720:'hd720',480:'large'}[S.q];
   v.innerHTML=`<iframe title="${esc(cur.name)}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen src="https://www.youtube.com/embed/${y}?autoplay=1&rel=0&playsinline=1${vq?'&vq='+vq+'&hd=1':''}${first&&!user?'&mute=1':''}"></iframe>`}
  else v.innerHTML=`<div class="ext"><h2>${esc(cur.name)}</h2><p>${esc(cur.desc)} This broadcaster doesn’t allow its stream to be embedded, so it plays on its own site.</p><a class="go" href="${esc(cur.url)}" target="_blank" rel="noopener">Watch on ${esc(new URL(cur.url).hostname.replace('www.',''))}</a></div>`;
- first=false;renderList()}
+ first=false;renderList();hud()}
 
 function zap(d){const v=visible();if(!v.length)return;const i=v.findIndex(c=>c.id===(cur&&cur.id));play(v[(i+d+v.length)%v.length].id,true);
  const el=document.querySelector('.ch.on');if(el)el.scrollIntoView({block:'nearest'})}
@@ -188,7 +201,7 @@ $('del').onclick=()=>{if(!cur||!confirm('Remove “'+cur.name+'” from your lis
  if(S.custom.some(x=>x.id===c.id))S.custom=S.custom.filter(x=>x.id!==c.id);else S.removed.push(c.id);
  save();renderChips();play(all()[0]&&all()[0].id,true)};
 document.addEventListener('keydown',e=>{if(/INPUT|TEXTAREA|SELECT/.test(e.target.tagName)||$('modal').classList.contains('open'))return;
- if(e.key==='m')setMenu(app.classList.contains('nomenu'));if(e.key==='f')fs(!document.body.classList.contains('fs'));if(e.key==='Escape'&&document.body.classList.contains('fs'))fs(false);if(e.key==='ArrowDown'){e.preventDefault();zap(1)}if(e.key==='ArrowUp'){e.preventDefault();zap(-1)}});
+ if(e.key==='m')setMenu(!app.classList.contains('menu'));if(e.key==='f')fs(!document.body.classList.contains('fs'));if(e.key==='Escape')setMenu(false);if(e.key==='ArrowDown'){e.preventDefault();zap(1)}if(e.key==='ArrowUp'){e.preventDefault();zap(-1)}});
 
 const openM=()=>{['f-url','f-name','f-cat','f-desc'].forEach(i=>$(i).value='');$('err').textContent='';$('modal').classList.add('open');$('f-url').focus()};
 const closeM=()=>$('modal').classList.remove('open');
@@ -203,13 +216,14 @@ $('save').onclick=()=>{const raw=$('f-url').value.trim();if(/<video/i.test(raw))
  S.custom.push(c);save();closeM();cat='All';term='';$('q').value='';renderChips();play(c.id,true)};
 
 const app=document.querySelector('.app');
-function setMenu(on){app.classList.toggle('nomenu',!on);S.menu=on;save()}
-$('menub').onclick=()=>setMenu(app.classList.contains('nomenu'));
+let hudT;function setMenu(on){app.classList.toggle('menu',on);if(on)app.classList.remove('hud')}
+function hud(){if(app.classList.contains('menu'))return;app.classList.add('hud');clearTimeout(hudT);hudT=setTimeout(()=>app.classList.remove('hud'),4000)}
+$('menub').onclick=()=>setMenu(!app.classList.contains('menu'));$('scrim').onclick=()=>setMenu(false);$('edge').onmouseenter=()=>setMenu(true);
 function fs(on){document.body.classList.toggle('fs',on);$('fsb').textContent=on?'✕':'⛶';
- try{if(on&&!document.fullscreenElement)document.querySelector('.stage').requestFullscreen().catch(()=>{});else if(!on&&document.fullscreenElement)document.exitFullscreen()}catch(e){}}
+ try{if(on&&!document.fullscreenElement)document.documentElement.requestFullscreen().catch(()=>{});else if(!on&&document.fullscreenElement)document.exitFullscreen()}catch(e){}}
 $('fsb').onclick=()=>fs(!document.body.classList.contains('fs'));
 document.addEventListener('fullscreenchange',()=>{if(!document.fullscreenElement&&document.body.classList.contains('fs'))fs(false)});
-if(S.menu===false)app.classList.add('nomenu');
+
 function move(id,d){const ids=all().map(c=>c.id),v=visible().map(c=>c.id),a=ids.indexOf(id);
  if(d==='top'){ids.splice(a,1);ids.unshift(id)}else{const t=v[v.indexOf(id)+Number(d)];if(t===undefined)return;const b=ids.indexOf(t);[ids[a],ids[b]]=[ids[b],ids[a]]}
  S.order=ids;save();renderList();if(cur)$('inum').textContent=all().indexOf(cur)+1}
