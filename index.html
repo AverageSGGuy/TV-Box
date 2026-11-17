@@ -63,12 +63,31 @@ body.fs .info,body.fs #menub,body.fs .rail{display:none}body.fs .app{grid-templa
  .info{grid-template-columns:1fr;gap:8px}.tools{justify-content:flex-start}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+/* liquid glass */
+html{background:#0a0d14}body{background:transparent}
+body::before{content:"";position:fixed;inset:-10%;z-index:-1;opacity:.6;filter:blur(30px);background:radial-gradient(40% 35% at 15% 20%,#3b6dff,transparent 70%),radial-gradient(35% 35% at 85% 15%,#c04cff,transparent 70%),radial-gradient(40% 40% at 70% 90%,#00c2b8,transparent 70%),radial-gradient(30% 30% at 10% 90%,#ff7a59,transparent 70%)}
+.app{padding:14px;gap:14px}.stage{gap:14px}
+.rail,.info,.card{background:rgba(255,255,255,.09);-webkit-backdrop-filter:blur(26px) saturate(180%);backdrop-filter:blur(26px) saturate(180%);border:1px solid rgba(255,255,255,.2);box-shadow:inset 0 1px 0 rgba(255,255,255,.4),inset 0 -1px 0 rgba(255,255,255,.06),0 12px 40px rgba(0,0,0,.35)}
+.rail{border-radius:28px;overflow:hidden}.info{border-radius:24px}.card{border-radius:28px}
+.video{border-radius:24px;overflow:hidden;box-shadow:0 12px 40px rgba(0,0,0,.45)}
+.icon-btn,.search,select,.chip,input[type=text],input[type=url],textarea{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);border-radius:99px;box-shadow:inset 0 1px 0 rgba(255,255,255,.25)}
+textarea{border-radius:14px}.rail-top .icon-btn{padding:6px 10px;font-size:14px}
+.chip[aria-pressed=true]{background:rgba(255,255,255,.92);color:#10131a;border-color:transparent}
+.ch{border-left:0;margin:2px 8px;width:calc(100% - 16px);border-radius:18px}
+.ch:hover{background:rgba(255,255,255,.08)}
+.ch.on{background:rgba(255,255,255,.17);box-shadow:inset 0 1px 0 rgba(255,255,255,.35),0 4px 14px rgba(0,0,0,.25)}
+.logo{border-radius:12px;box-shadow:inset 0 1px 0 rgba(255,255,255,.35)}
+.go{border-radius:99px;background:rgba(255,255,255,.92)}
+.float button{background:rgba(255,255,255,.16);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border-radius:50%;border-color:rgba(255,255,255,.3)}
+.modal{-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
+.mv{display:flex;gap:3px}.mv span{width:26px;height:26px;display:grid;place-items:center;border-radius:50%;background:rgba(255,255,255,.12);font-size:12px}.mv span:hover{background:rgba(255,255,255,.28)}
+body.fs .app{padding:0;gap:0}body.fs .video{border-radius:0;box-shadow:none}body.fs::before{display:none}
 </style>
 </head>
 <body>
 <div class="app">
  <aside class="rail">
-  <div class="rail-top"><h1>TV Box</h1><button class="icon-btn" id="add">+ Add</button></div>
+  <div class="rail-top"><h1>TV Box</h1><button class="icon-btn" id="ord">Reorder</button><button class="icon-btn" id="add">+ Add</button></div>
   <input class="search" id="q" type="text" placeholder="Search channels" aria-label="Search channels">
   <div class="chips" id="chips"></div>
   <div class="list" id="list"></div>
@@ -120,12 +139,12 @@ const D=[
 ].map(a=>({id:a[0],name:a[1],cat:a[2],url:a[3],desc:a[4]}));
 
 const KEY='myChannels.v1';
-let S={custom:[],favs:[],removed:[],last:'cna',q:'1080'};
+let S={custom:[],favs:[],removed:[],last:'cna',q:'1080',order:[]};
 try{const r=localStorage.getItem(KEY);if(r)S=Object.assign(S,JSON.parse(r))}catch(e){}
 const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}};
-let cat='All',term='',cur=null,first=true;
+let cat='All',term='',cur=null,first=true,edit=false;
 const $=id=>document.getElementById(id);
-const all=()=>D.concat(S.custom).filter(c=>!S.removed.includes(c.id));
+const all=()=>{const o=S.order||[],ix=c=>{const i=o.indexOf(c.id);return i<0?1e6:i};return D.concat(S.custom).filter(c=>!S.removed.includes(c.id)).sort((a,b)=>ix(a)-ix(b))};
 
 function ytId(u){try{const x=new URL(u),h=x.hostname.replace('www.','');
  if(h==='youtu.be')return x.pathname.slice(1)||null;
@@ -141,7 +160,7 @@ function renderChips(){const cats=['All','Favourites',...new Set(all().map(c=>c.
  $('chips').innerHTML=cats.map(c=>`<button class="chip" aria-pressed="${c===cat}" data-c="${esc(c)}">${esc(c)}</button>`).join('');
  $('cats').innerHTML=[...new Set(all().map(c=>c.cat))].map(c=>`<option value="${esc(c)}">`).join('')}
 function renderList(){const a=all(),v=visible();
- $('list').innerHTML=v.length?v.map(c=>`<button class="ch ${cur&&cur.id===c.id?'on':''}" data-id="${c.id}"><span class="n">${a.indexOf(c)+1}</span>${tile(c.name)}<span class="t"><b>${esc(c.name)}</b><small>${esc(c.cat)}</small></span><span class="heart ${S.favs.includes(c.id)?'f':''}" data-h="${c.id}" role="button" aria-label="Favourite">${S.favs.includes(c.id)?'♥':'♡'}</span></button>`).join(''):'<div class="empty">No channels here yet. Use “+ Add” to paste a livestream link.</div>'}
+ $('list').innerHTML=v.length?v.map(c=>`<button class="ch ${cur&&cur.id===c.id?'on':''}" data-id="${c.id}"><span class="n">${a.indexOf(c)+1}</span>${tile(c.name)}<span class="t"><b>${esc(c.name)}</b><small>${esc(c.cat)}</small></span>${edit?'<span class="mv"><span data-m="top" role="button" aria-label="Move to top" title="Move to top">⤒</span><span data-m="-1" role="button" aria-label="Move up">▲</span><span data-m="1" role="button" aria-label="Move down">▼</span></span>':`<span class="heart ${S.favs.includes(c.id)?'f':''}" data-h="${c.id}" role="button" aria-label="Favourite">${S.favs.includes(c.id)?'♥':'♡'}</span>`}</button>`).join(''):'<div class="empty">No channels here yet. Use “+ Add” to paste a livestream link.</div>'}
 
 function play(id,user){const a=all();cur=a.find(c=>c.id===id)||a[0];if(!cur){$('video').innerHTML='<div class="ext"><p>No channels left. Add one to start watching.</p></div>';return}
  S.last=cur.id;save();
@@ -159,7 +178,8 @@ function zap(d){const v=visible();if(!v.length)return;const i=v.findIndex(c=>c.i
 
 $('chips').onclick=e=>{const b=e.target.closest('.chip');if(!b)return;cat=b.dataset.c;renderChips();renderList()};
 $('q').oninput=e=>{term=e.target.value.toLowerCase();renderList()};
-$('list').onclick=e=>{const h=e.target.closest('[data-h]');
+$('list').onclick=e=>{const mv=e.target.closest('[data-m]');if(mv){e.stopPropagation();move(mv.closest('.ch').dataset.id,mv.dataset.m);return}
+ const h=e.target.closest('[data-h]');
  if(h){e.stopPropagation();const id=h.dataset.h,i=S.favs.indexOf(id);i<0?S.favs.push(id):S.favs.splice(i,1);save();$('fav').textContent=cur&&S.favs.includes(cur.id)?'♥':'♡';renderList();return}
  const b=e.target.closest('.ch');if(b)play(b.dataset.id,true)};
 $('qual').onchange=e=>{S.q=e.target.value;save();play(cur.id,true)};
@@ -190,6 +210,10 @@ function fs(on){document.body.classList.toggle('fs',on);$('fsb').textContent=on?
 $('fsb').onclick=()=>fs(!document.body.classList.contains('fs'));
 document.addEventListener('fullscreenchange',()=>{if(!document.fullscreenElement&&document.body.classList.contains('fs'))fs(false)});
 if(S.menu===false)app.classList.add('nomenu');
+function move(id,d){const ids=all().map(c=>c.id),v=visible().map(c=>c.id),a=ids.indexOf(id);
+ if(d==='top'){ids.splice(a,1);ids.unshift(id)}else{const t=v[v.indexOf(id)+Number(d)];if(t===undefined)return;const b=ids.indexOf(t);[ids[a],ids[b]]=[ids[b],ids[a]]}
+ S.order=ids;save();renderList();if(cur)$('inum').textContent=all().indexOf(cur)+1}
+$('ord').onclick=()=>{edit=!edit;$('ord').textContent=edit?'Done':'Reorder';renderList()};
 $('qual').value=S.q;renderChips();play(S.last,false);
 </script>
 </body>
