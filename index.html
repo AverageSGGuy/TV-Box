@@ -232,7 +232,9 @@ $('save').onclick=()=>{const raw=$('f-url').value.trim();if(/<video/i.test(raw))
  S.custom.push(c);save();closeM();cat='All';term='';$('q').value='';renderChips();play(c.id,true)};
 
 const app=document.querySelector('.app');
-let hudT;function setMenu(on){app.classList.toggle('menu',on);if(on)app.classList.remove('hud')}
+let hudT,menuT;function setMenu(on){app.classList.toggle('menu',on);if(on)app.classList.remove('hud');pokeMenu()}
+function pokeMenu(){clearTimeout(menuT);if(app.classList.contains('menu'))menuT=setTimeout(()=>{if($('modal').classList.contains('open'))return pokeMenu();setMenu(false)},10000)}
+['pointerdown','keydown','wheel','touchstart','input','scroll'].forEach(t=>app.addEventListener(t,pokeMenu,true));document.querySelector('.rail').addEventListener('pointermove',pokeMenu);
 function hud(){if(app.classList.contains('menu'))return;app.classList.add('hud');clearTimeout(hudT);hudT=setTimeout(()=>app.classList.remove('hud'),4000)}
 $('menub').onclick=()=>setMenu(!app.classList.contains('menu'));$('scrim').onclick=()=>setMenu(false);$('edge').onmouseenter=()=>setMenu(true);
 function fs(on){document.body.classList.toggle('fs',on);$('fsb').textContent=on?'✕':'⛶';
