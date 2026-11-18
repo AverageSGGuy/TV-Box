@@ -102,7 +102,7 @@ body::before{display:none}
 .dial{position:fixed;z-index:6;top:22px;left:22px;min-width:84px;text-align:center;padding:8px 22px;border-radius:22px;font:600 56px/1 var(--num);letter-spacing:.04em;background:rgba(255,255,255,.14);-webkit-backdrop-filter:blur(26px) saturate(180%);backdrop-filter:blur(26px) saturate(180%);border:1px solid rgba(255,255,255,.3);box-shadow:inset 0 1px 0 rgba(255,255,255,.4),0 12px 40px rgba(0,0,0,.35);opacity:0;transform:scale(.96);transition:opacity .15s,transform .15s;pointer-events:none}
 .dial.on{opacity:1;transform:none}.dial small{display:block;font:500 14px var(--font);letter-spacing:0;color:#cfd6e4;margin-top:4px}
 
-/* Description stream controls, Multiview grid (2 to 9+ tiles), & Drag-and-Drop */
+/* Description stream controls & Multiview grid (2 to 9+ tiles) */
 .desc-bar{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:5px}
 .desc-bar .pill-btn,.desc-bar select{background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.24);border-radius:99px;padding:3px 10px;font-size:12px;color:#fff;text-decoration:none;cursor:pointer;max-width:280px}
 .desc-bar .pill-btn:hover{background:var(--accent);color:#06121f;border-color:var(--accent)}
@@ -116,11 +116,6 @@ body::before{display:none}
 .mv-pane.active .mv-tag{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
 .mv-tag button{background:none;border:0;color:var(--mute);cursor:pointer;padding:0 2px;font-size:13px}
 .mv-tag button:hover{color:#ff8a8a}
-.ch[draggable="true"]{cursor:grab}
-.ch[draggable="true"]:active{cursor:grabbing}
-body.dragging-ch .mv-pane iframe{pointer-events:none}
-.mv-pane.drag-over{border-color:#4aa3ff;box-shadow:inset 0 0 0 2px #4aa3ff,0 0 24px rgba(74,163,255,.45)}
-.mv-pane.drag-over::after{content:"Drop stream here";position:absolute;inset:0;display:grid;place-items:center;background:rgba(10,13,20,.65);color:#fff;font:600 18px var(--num);letter-spacing:.04em;z-index:4;pointer-events:none}
 </style>
 </head>
 <body>
@@ -397,24 +392,10 @@ function renderChips(){const cats=['All','Favourites',...new Set(all().map(c=>c.
 
 function renderList(){const a=all(),v=visible();
  const activeIds = mvMode ? mvSlots.map(s => s.chId) : (cur ? [cur.id] : []);
- $('list').innerHTML=v.length?v.map(c=>`<button class="ch ${activeIds.includes(c.id)?'on':''}" data-id="${c.id}" draggable="${!edit}"><span class="n">${a.indexOf(c)+1}</span>${tile(c.name)}<span class="t"><b>${esc(c.name)}</b><small>${esc(c.cat)}</small></span>${edit?'<span class="mv"><span data-m="top" role="button" aria-label="Move to top" title="Move to top">⤒</span><span data-m="-1" role="button" aria-label="Move up">▲</span><span data-m="1" role="button" aria-label="Move down">▼</span></span>':`<span class="heart ${S.favs.includes(c.id)?'f':''}" data-h="${c.id}" role="button" aria-label="Favourite">${S.favs.includes(c.id)?'♥':'♡'}</span>`}</button>`).join(''):'<div class="empty">No channels here yet. Use “+ Add” to paste a livestream link.</div>';
-
- $('list').querySelectorAll('.ch[draggable="true"]').forEach(el => {
-   el.ondragstart = (e) => {
-     e.dataTransfer.setData('text/plain', el.dataset.id);
-     e.dataTransfer.effectAllowed = 'copy';
-     document.body.classList.add('dragging-ch');
-   };
-   el.ondragend = () => {
-     document.body.classList.remove('dragging-ch');
-     document.querySelectorAll('.mv-pane.drag-over').forEach(p => p.classList.remove('drag-over'));
-   };
- });
-}
+ $('list').innerHTML=v.length?v.map(c=>`<button class="ch ${activeIds.includes(c.id)?'on':''}" data-id="${c.id}"><span class="n">${a.indexOf(c)+1}</span>${tile(c.name)}<span class="t"><b>${esc(c.name)}</b><small>${esc(c.cat)}</small></span>${edit?'<span class="mv"><span data-m="top" role="button" aria-label="Move to top" title="Move to top">⤒</span><span data-m="-1" role="button" aria-label="Move up">▲</span><span data-m="1" role="button" aria-label="Move down">▼</span></span>':`<span class="heart ${S.favs.includes(c.id)?'f':''}" data-h="${c.id}" role="button" aria-label="Favourite">${S.favs.includes(c.id)?'♥':'♡'}</span>`}</button>`).join(''):'<div class="empty">No channels here yet. Use “+ Add” to paste a livestream link.</div>'}
 
 function buildYtIframe(ch, videoOrChParam, mute) {
   const vq = {1080:'hd1080',720:'hd720',480:'large'}[S.q];
-  // Convert channel ID (UC...) into YouTube's native Live Streams playlist (UULV...)
   if (videoOrChParam.startsWith('live_stream?channel=')) {
     const chId = videoOrChParam.split('=')[1].split('&')[0];
     const liveListId = 'UULV' + chId.slice(2);
@@ -555,29 +536,6 @@ function renderMultiview(user) {
         if (activeCh) syncInfoBar(activeCh, mvSlots[mvActiveIdx].vidOverride);
         renderList();
       }
-    };
-  });
-
-  v.querySelectorAll('.mv-pane').forEach(pane => {
-    pane.ondragover = (e) => {
-      if (!mvMode) return;
-      e.preventDefault();
-      e.dataTransfer.dropEffect = 'copy';
-      pane.classList.add('drag-over');
-    };
-    pane.ondragleave = (e) => {
-      if (!pane.contains(e.relatedTarget)) pane.classList.remove('drag-over');
-    };
-    pane.ondrop = (e) => {
-      e.preventDefault();
-      pane.classList.remove('drag-over');
-      document.body.classList.remove('dragging-ch');
-      const droppedId = e.dataTransfer.getData('text/plain');
-      const slotIdx = Number(pane.dataset.slot);
-      if (!droppedId || Number.isNaN(slotIdx)) return;
-      mvSlots[slotIdx] = { chId: droppedId, vidOverride: '' };
-      mvActiveIdx = slotIdx;
-      renderMultiview(true);
     };
   });
 
