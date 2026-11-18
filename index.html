@@ -172,10 +172,13 @@ const D=[
 ['cnao','CNA Originals','News','https://www.youtube.com/watch?v=9Y4kOQk_K3Y','Documentaries and features from CNA.'],
 ['bbg','Bloomberg Television','News','https://www.youtube.com/watch?v=QB5BNdBFujE','Markets, business and economy.'],
 ['bb0','Bloomberg Originals','News','https://www.youtube.com/live/DxmDPrfinXY?si=11kgajwEar211G4V','Markets, business and economy.'],
-['che','8视界','新聞','https://www.youtube.com/channel/UCUqUtr0w-K8W4AfpbHiYSaQ','下午6点半、10点新闻.'],
+// === NEW: Updated 8视界 URL to @8worldSG + added TVB News, Reuters, and AP News ===
+['che','8视界','新聞','https://www.youtube.com/@8worldSG','下午6点半、10点新闻.'],
 ['bdk','八度空间','新聞','https://www.youtube.com/channel/UCJZTvwnKU0PBH4dhDJkFyZw','早上9点半、下午12点半、下午8点.'],
+['tvb','無綫新聞 TVB News','新聞','https://news.tvb.com/tc/live/C','24小時無綫新聞台直播 (External player).'],
 ['reu','Reuters','News','https://www.youtube.com/channel/UChqUTb7kYRX8-EiaN3XFrSQ','Live global breaking news and raw feeds from Reuters.'],
 ['apn','AP News','News','https://www.youtube.com/channel/UC52X5wxOL_s5yw0dQk7NtgA','Live global coverage and press briefings from Associated Press.'],
+// === END NEW ===
 ['tvbs','TVBS 新聞','新聞','https://www.youtube.com/live/2mCSYvcfhtc?si=kpjj3BkdZRjWmJ2V','TVBS新聞'],
 ['ttv','台視新聞','新聞','https://www.youtube.com/channel/UC8ROUUjHzEQm-ndb69CX8Ww','台視新聞'],
 ['san','三立新聞','新聞','https://www.youtube.com/live/hGJkDZDchYI?si=QOSAFTOCSUlAyi0A','三立新聞'],
@@ -215,7 +218,7 @@ const D=[
 ['snm','Snoopy Music','Music','https://www.youtube.com/watch?v=XPIS0XA5lpk','Cosy Snoopy-themed music.']
 ].map(a=>({id:a[0],name:a[1],cat:a[2],url:a[3],desc:a[4]}));
 
-// === NEW: Map YouTube @handles & resolve 8world / multi-stream feeds ===
+// === NEW: Map YouTube @handles & scrape /streams page directly for active LIVE badges ===
 const YT_HANDLES = {
   '8worldsg': 'UCUqUtr0w-K8W4AfpbHiYSaQ',
   'reuters': 'UChqUTb7kYRX8-EiaN3XFrSQ',
@@ -236,39 +239,100 @@ function get8worldExpectedTitles() {
   return hour >= 20.5 ? [nightShow, eveningShow] : [eveningShow, nightShow];
 }
 
-async function fetchChannelStreams(channelId, is8world) {
-  try {
-    const rssUrl = `https://www.youtube.com/feeds/videos.xml?channel_id=${channelId}`;
-    const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(rssUrl)}`;
-    const res = await fetch(proxyUrl);
-    const data = await res.json();
-    if (!data || !data.contents) return [];
-    const xml = new DOMParser().parseFromString(data.contents, 'text/xml');
-    const entries = [...xml.querySelectorAll('entry')].map(e => ({
-      vid: e.querySelector('videoId')?.textContent || '',
-      title: e.querySelector('title')?.textContent || ''
-    })).filter(x => x.vid);
-
-    if (is8world) {
-      const targets = get8worldExpectedTitles();
-      const prioritized = [];
-      for (const t of targets) {
-        const found = entries.find(e => e.title.includes(t));
-        if (found && !prioritized.some(p => p.vid === found.vid)) prioritized.push(found);
+async function fetchWithFallbackProxies(targetUrl) {
+  const proxies = [
+    u => `https://corsproxy.io/?${encodeURIComponent(u)}`,
+    u => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
+    u => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(u)}`
+  ];
+  for (const makeProxy of proxies) {
+    try {
+      const res = await fetch(makeProxy(targetUrl), { signal: AbortSignal.timeout(6000) });
+      if (res.ok) {
+        const text = await res.text();
+        if (text && text.length > 500) return text;
       }
-      for (const e of entries) {
-        if (e.title.includes('【直播】') && !prioritized.some(p => p.vid === e.vid)) prioritized.push(e);
-      }
-      return prioritized.length ? prioritized : entries.slice(0, 6);
-    }
-
-    const liveRe = /\bLIVE\b|【直播】|直播|Stream/i;
-    const live = entries.filter(e => liveRe.test(e.title));
-    const rest = entries.filter(e => !liveRe.test(e.title));
-    return [...live, ...rest].slice(0, 8);
-  } catch (e) {
-    return [];
+    } catch (e) {}
   }
+  return null;
+}
+
+function extractStreamsFromYouTubeHtml(html) {
+  const found = [];
+  const seen = new Set();
+  const match = html.match(/var ytInitialData\s*=\s*(\{.+?\});\s*<\/script>/s) ||
+                html.match(/ytInitialData"\s*:\s*(\{.+?\})\s*,\s*"/s);
+  if (match) {
+    try {
+      const walk = (node) => {
+        if (!node || typeof node !== 'object') return;
+        if (node.videoRenderer && node.videoRenderer.videoId) {
+          const vr = node.videoRenderer;
+          const vid = vr.videoId;
+          const title = vr.title?.runs?.map(r => r.text).join('') || vr.title?.simpleText || '';
+          const badges = JSON.stringify(vr.badges || '') + JSON.stringify(vr.thumbnailOverlays || '');
+          const isLive = /"style":"BADGE_STYLE_TYPE_LIVE_NOW"|"iconType":"LIVE"|"text":"LIVE"/i.test(badges);
+          if (!seen.has(vid)) {
+            seen.add(vid);
+            found.push({ vid, title, isLive });
+          }
+        }
+        if (Array.isArray(node)) node.forEach(walk);
+        else Object.values(node).forEach(walk);
+      };
+      walk(JSON.parse(match[1]));
+    } catch (e) {}
+  }
+  return found;
+}
+
+async function fetchChannelStreams(channelId, is8world) {
+  const streamsUrl = is8world
+    ? 'https://www.youtube.com/@8worldSG/streams'
+    : `https://www.youtube.com/channel/${channelId}/streams`;
+
+  // 1. Primary: Fetch the actual /streams tab HTML to catch currently LIVE streams
+  const html = await fetchWithFallbackProxies(streamsUrl);
+  let entries = html ? extractStreamsFromYouTubeHtml(html) : [];
+
+  // 2. Secondary fallback: YouTube RSS feed if HTML scrape was blocked
+  if (!entries.length) {
+    const rssXml = await fetchWithFallbackProxies(`https://www.youtube.com/feeds/videos.xml?channel_id=${channelId}`);
+    if (rssXml) {
+      const xml = new DOMParser().parseFromString(rssXml, 'text/xml');
+      entries = [...xml.querySelectorAll('entry')].map(e => ({
+        vid: e.querySelector('videoId')?.textContent || '',
+        title: e.querySelector('title')?.textContent || '',
+        isLive: /【直播】|\bLIVE\b/i.test(e.querySelector('title')?.textContent || '')
+      })).filter(x => x.vid);
+    }
+  }
+
+  if (!entries.length) return [];
+
+  if (is8world) {
+    const targets = get8worldExpectedTitles();
+    const prioritized = [];
+    // First: LIVE stream matching today's expected title
+    for (const t of targets) {
+      const liveMatch = entries.find(e => e.isLive && e.title.includes(t));
+      if (liveMatch && !prioritized.some(p => p.vid === liveMatch.vid)) prioritized.push(liveMatch);
+    }
+    // Second: Any currently LIVE stream on @8worldSG
+    for (const e of entries) {
+      if (e.isLive && !prioritized.some(p => p.vid === e.vid)) prioritized.push(e);
+    }
+    // Third: Today's scheduled/recent title even if badge wasn't detected
+    for (const t of targets) {
+      const anyMatch = entries.find(e => e.title.includes(t));
+      if (anyMatch && !prioritized.some(p => p.vid === anyMatch.vid)) prioritized.push(anyMatch);
+    }
+    return prioritized.length ? prioritized : entries.slice(0, 8);
+  }
+
+  const live = entries.filter(e => e.isLive);
+  const rest = entries.filter(e => !e.isLive);
+  return [...live, ...rest].slice(0, 8);
 }
 // === END NEW ===
 
@@ -354,7 +418,7 @@ function renderDescStreamControls(ch, selectedVid) {
   if (list.length) {
     selectHtml = `<select id="stream-sel" aria-label="Switch livestream" title="Switch active stream on this channel">
       <option value="">Default Channel Live</option>
-      ${list.map((s, idx) => `<option value="${esc(s.vid)}" ${selectedVid === s.vid ? 'selected' : ''}>Stream ${idx + 1}: ${esc(s.title.slice(0, 42))}${s.title.length > 42 ? '…' : ''}</option>`).join('')}
+      ${list.map((s, idx) => `<option value="${esc(s.vid)}" ${selectedVid === s.vid ? 'selected' : ''}>${s.isLive ? '🔴 ' : ''}Stream ${idx + 1}: ${esc(s.title.slice(0, 42))}${s.title.length > 42 ? '…' : ''}</option>`).join('')}
     </select>`;
   }
 
@@ -458,7 +522,6 @@ function renderMultiview(user) {
     };
   });
 
-  // Drag-and-drop drop targets on each Multiview tile
   v.querySelectorAll('.mv-pane').forEach(pane => {
     pane.ondragover = (e) => {
       if (!mvMode) return;
@@ -544,7 +607,7 @@ function play(id,user){const a=all();cur=a.find(c=>c.id===id)||a[0];if(!cur){$('
     const chId = y.slice(3);
     const is8world = (chId === 'UCUqUtr0w-K8W4AfpbHiYSaQ');
     const cached = streamCache[chId];
-    const initialVid = cached?.[0]?.vid || '';
+    const initialVid = (is8world && cached?.[0]?.vid) ? cached[0].vid : '';
     v.innerHTML = buildYtIframe(cur, initialVid ? `${initialVid}?` : `live_stream?channel=${chId}&`, first && !user);
     renderDescStreamControls(cur, initialVid);
 
