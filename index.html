@@ -132,9 +132,9 @@ body::before{display:none}
 <div class="dial" id="dial" role="status" aria-live="polite"></div>
 <div class="modal" id="modal"><div class="card" role="dialog" aria-labelledby="mt">
  <h3 id="mt">Add a channel</h3>
- <label>Livestream link<input type="url" id="f-url" placeholder="Paste a link or YouTube embed code"></label>
+ <label>Livestream link<input type="url" id="f-url" placeholder="YouTube link, channel ID or embed code"></label>
  <label>Channel name<input type="text" id="f-name" maxlength="40"></label>
- <label>Category<input type="text" id="f-cat" list="cats" maxlength="24" placeholder="News, 新聞, Music, Kids, 臺灣"></label>
+ <label>Category<input type="text" id="f-cat" list="cats" maxlength="24" placeholder="News, 新聞, Kids, 臺灣, Music, Korea"></label>
  <datalist id="cats"></datalist>
  <label>Short description<textarea id="f-desc" rows="2" maxlength="120"></textarea></label>
  <div class="err" id="err"></div>
@@ -145,6 +145,8 @@ body::before{display:none}
 const D=[
 ['cna','CNA','News','https://www.youtube.com/live/-PWMxjBgr0k?si=T0boxcibhUSUEfF3','Asia-focused 24/7 news from Singapore.'],
 ['cnao','CNA Originals','News','https://www.youtube.com/watch?v=9Y4kOQk_K3Y','Documentaries and features from CNA.'],
+['che','8视界','新聞','https://www.youtube.com/channel/UCUqUtr0w-K8W4AfpbHiYSaQ','下午6点半、10点新闻.'],
+['bdk','八度空间','新聞','https://www.youtube.com/channel/UCJZTvwnKU0PBH4dhDJkFyZw','早上9点半、下午12点半、下午8点.'],
 ['bbg','Bloomberg Television','News','https://www.youtube.com/watch?v=QB5BNdBFujE','Markets, business and economy.'],
 ['bb0','Bloomberg Originals','News','https://www.youtube.com/live/DxmDPrfinXY?si=11kgajwEar211G4V','Markets, business and economy.'],
 ['tvbs','TVBS 新聞','新聞','https://www.youtube.com/live/2mCSYvcfhtc?si=kpjj3BkdZRjWmJ2V','TVBS新聞'],
@@ -154,8 +156,9 @@ const D=[
 ['cti','中天新聞','新聞','https://www.youtube.com/live/vr3XyVCR4T0?si=lwbfK4AnHnYlkQYs','中天新聞'],
 ['cts','華視新聞','新聞','https://www.youtube.com/live/wM0g8EoUZ_E?si=KT_7huh7sjWo-X-r','華視新聞'],
 ['ftv','民視新聞','新聞','https://www.youtube.com/live/ylYJSBUgaMA?si=2UZS-KxVZT4X9J_f','民視新聞'],
+['pts','公視新聞','新聞','https://www.youtube.com/live/hg4nYb3jE9A?si=nHBVf79Z1f31e5at','公視新聞'],
 ['abc','ABC News','News','https://www.youtube.com/watch?v=KQhNZQ_Uag8','US and world news.'],
-['nbc','NBC News','News','https://www.youtube.com/watch?v=C5BUYsiW9n4','Breaking news and analysis.'],
+['nbc','NBC News','News','https://www.youtube.com/channel/UCeY0bbntWzzVIaj2z3QigXg','Breaking news and analysis.'],
 ['cbs','CBS News','News','https://www.youtube.com/watch?v=tvl69iYzlKQ','24/7 US and global coverage.'],
 ['cgtn','CGTN','News','https://www.youtube.com/watch?v=0i7n3r01L2U','China Global Television Network in English.'],
 ['aja','Al Jazeera','News','https://www.youtube.com/watch?v=gCNeDWCI0vo','International news from Doha.'],
@@ -172,7 +175,8 @@ const D=[
 ['cg','Curious George','Kids','https://www.youtube.com/live/usb1eiARplQ?si=LJ0OTXV7bRLTc_Fo','Curious George.'],
 ['ebcv','東森綜合2台','臺灣','https://www.youtube.com/live/cimbpAZUjzw?si=J3uIL3N5EKUz6Doe','東森綜合2台'],
 ['hdn','綜藝大熱門','臺灣','https://www.youtube.com/live/5I-1d5lZ3EE?si=4K1AHcn7eiHRGG3u','綜藝大熱門'],
-['zyd','綜藝大集會','臺灣','https://www.youtube.com/live/xQwzLc7hWOI?si=6d_3lBvXtfSsn_4e','綜藝大集會']
+['zyd','綜藝大集會','臺灣','https://www.youtube.com/live/xQwzLc7hWOI?si=6d_3lBvXtfSsn_4e','綜藝大集會'],
+['kbs','KBS Korea','Korea','https://www.youtube.com/live/OxQQsIvJTTU?si=zGwcOsFYHdCdKTaZ','KBS Korea']
 ].map(a=>({id:a[0],name:a[1],cat:a[2],url:a[3],desc:a[4]}));
 
 const KEY='myChannels.v1';
@@ -186,7 +190,7 @@ const all=()=>{const o=S.order||[],ix=c=>{const i=o.indexOf(c.id);return i<0?1e6
 function ytId(u){try{const x=new URL(u),h=x.hostname.replace('www.','');
  if(h==='youtu.be')return x.pathname.slice(1)||null;
  if(h.endsWith('youtube.com')){if(x.searchParams.get('v'))return x.searchParams.get('v');
-  const m=x.pathname.match(/^\/(live|embed|shorts)\/([\w-]+)/);return m?m[2]:null}}catch(e){}return null}
+  if(x.searchParams.get('channel'))return 'ch:'+x.searchParams.get('channel');const c=x.pathname.match(/^\/channel\/(UC[\w-]{22})/);if(c)return 'ch:'+c[1];const m=x.pathname.match(/^\/(live|embed|shorts)\/([\w-]+)/);return m?m[2]:null}}catch(e){}return null}
 function tile(name){let h=0;for(const ch of name)h=(h*31+ch.charCodeAt(0))%360;
  const w=name.split(/\s+/);const ini=(w.length>1?w[0][0]+w[1][0]:name.slice(0,3)).toUpperCase();
  return `<div class="logo" style="background:hsl(${h} 42% 34%)">${ini}</div>`}
@@ -206,7 +210,7 @@ function play(id,user){const a=all();cur=a.find(c=>c.id===id)||a[0];if(!cur){$('
  const y=ytId(cur.url),v=$('video');
  $('qual').disabled=!y;
  if(y){const vq={1080:'hd1080',720:'hd720',480:'large'}[S.q];
-  v.innerHTML=`<iframe title="${esc(cur.name)}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen src="https://www.youtube.com/embed/${y}?autoplay=1&rel=0&playsinline=1${vq?'&vq='+vq+'&hd=1':''}${first&&!user?'&mute=1':''}"></iframe>`}
+  v.innerHTML=`<iframe title="${esc(cur.name)}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen src="https://www.youtube.com/embed/${y.startsWith('ch:')?'live_stream?channel='+y.slice(3)+'&':y+'?'}autoplay=1&rel=0&playsinline=1${vq?'&vq='+vq+'&hd=1':''}${first&&!user?'&mute=1':''}"></iframe>`}
  else v.innerHTML=`<div class="ext"><h2>${esc(cur.name)}</h2><p>${esc(cur.desc)} This broadcaster doesn’t allow its stream to be embedded, so it plays on its own site.</p><a class="go" href="${esc(cur.url)}" target="_blank" rel="noopener">Watch on ${esc(new URL(cur.url).hostname.replace('www.',''))}</a></div>`;
  first=false;renderList();hud()}
 
@@ -233,7 +237,8 @@ $('add').onclick=openM;$('cancel').onclick=closeM;
 $('modal').onclick=e=>{if(e.target===$('modal'))closeM()};
 $('f-url').onblur=()=>{if(!$('f-name').value){try{const h=new URL($('f-url').value).hostname.replace('www.','');if(!ytId($('f-url').value))$('f-name').value=h.split('.')[0]}catch(e){}}};
 $('save').onclick=()=>{const raw=$('f-url').value.trim();if(/<video/i.test(raw)){$('err').textContent='That video code only works inside your own tab. Paste the channel page link instead.';return}
- const m=raw.match(/src="([^"]+)"/),url=m?m[1]:raw,name=$('f-name').value.trim();
+ const m=raw.match(/src="([^"]+)"/),url=/^UC[\w-]{22}$/.test(raw)?'https://www.youtube.com/channel/'+raw:m?m[1]:raw,name=$('f-name').value.trim();
+ if(/youtube\.com\/(@|c\/|user\/)/.test(url)){$('err').textContent='That is a channel name link. Open the channel’s About tab, copy its channel ID (starts with UC) and paste that instead.';return}
  try{const u=new URL(url);if(!/^https?:$/.test(u.protocol))throw 0}catch(e){$('err').textContent='Paste a full link starting with https://';return}
  if(!name){$('err').textContent='Give the channel a name.';return}
  const c={id:'u'+Date.now(),name,cat:$('f-cat').value.trim()||'Other',url,desc:$('f-desc').value.trim()||'Added by me.'};
