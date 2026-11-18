@@ -317,10 +317,8 @@ function extractStreamsFromYouTubeHtml(html) {
 }
 
 async function fetchChannelStreams(channelId, is8world) {
-  // 1. Primary: Piped / Invidious JSON APIs
   let entries = await fetchFromPipedOrInvidious(channelId);
 
-  // 2. Secondary: Scrape /streams HTML via CORS proxies
   if (!entries.length) {
     const streamsUrl = is8world
       ? 'https://www.youtube.com/@8worldSG/streams'
@@ -329,7 +327,6 @@ async function fetchChannelStreams(channelId, is8world) {
     if (html) entries = extractStreamsFromYouTubeHtml(html);
   }
 
-  // 3. Tertiary: YouTube XML RSS feed
   if (!entries.length) {
     const rssXml = await fetchWithFallbackProxies(`https://www.youtube.com/feeds/videos.xml?channel_id=${channelId}`);
     if (rssXml) {
@@ -417,6 +414,12 @@ function renderList(){const a=all(),v=visible();
 
 function buildYtIframe(ch, videoOrChParam, mute) {
   const vq = {1080:'hd1080',720:'hd720',480:'large'}[S.q];
+  // Convert channel ID (UC...) into YouTube's native Live Streams playlist (UULV...)
+  if (videoOrChParam.startsWith('live_stream?channel=')) {
+    const chId = videoOrChParam.split('=')[1].split('&')[0];
+    const liveListId = 'UULV' + chId.slice(2);
+    return `<iframe title="${esc(ch.name)}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen src="https://www.youtube.com/embed/videoseries?list=${liveListId}&autoplay=1&rel=0&playsinline=1${vq?'&vq='+vq+'&hd=1':''}${mute?'&mute=1':''}"></iframe>`;
+  }
   return `<iframe title="${esc(ch.name)}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen src="https://www.youtube.com/embed/${videoOrChParam}autoplay=1&rel=0&playsinline=1${vq?'&vq='+vq+'&hd=1':''}${mute?'&mute=1':''}"></iframe>`;
 }
 
@@ -440,13 +443,13 @@ function renderDescStreamControls(ch, selectedVid) {
   let selectHtml = '';
   if (list.length) {
     selectHtml = `<select id="stream-sel" aria-label="Switch livestream" title="Switch active stream on this channel">
-      <option value="">Default Channel Live</option>
+      <option value="">Live Playlist (Auto)</option>
       ${list.map((s, idx) => `<option value="${esc(s.vid)}" ${selectedVid === s.vid ? 'selected' : ''}>${s.isLive ? '🔴 ' : ''}Stream ${idx + 1}: ${esc(s.title.slice(0, 42))}${s.title.length > 42 ? '…' : ''}</option>`).join('')}
     </select>`;
   }
 
   bar.innerHTML = `
-    <button class="pill-btn" id="find-vid" title="Auto-detect active stream">${list.length ? '↻ Refresh' : 'Find Live Stream'}</button>
+    <button class="pill-btn" id="find-vid" title="Scan for individual stream titles">${list.length ? '↻ Refresh' : 'Find Live Stream'}</button>
     ${selectHtml}
     <button class="pill-btn" id="paste-vid" title="Paste a specific YouTube live link for this session">Paste Live Link</button>
     <a class="pill-btn" href="${streamsPage}" target="_blank" rel="noopener">All Streams ↗</a>
@@ -468,7 +471,7 @@ function renderDescStreamControls(ch, selectedVid) {
     streamCache[chId] = streams;
     const bestVid = streams[0]?.vid || '';
     applyVideoId(bestVid);
-    if (!streams.length) $('find-vid').textContent = 'Not found (use Paste)';
+    if (!streams.length) $('find-vid').textContent = 'Using Live Playlist';
   };
 
   $('paste-vid').onclick = () => {
