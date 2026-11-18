@@ -106,6 +106,7 @@ body::before{display:none}
 .desc-bar{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:5px}
 .desc-bar .pill-btn,.desc-bar select{background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.24);border-radius:99px;padding:3px 10px;font-size:12px;color:#fff;text-decoration:none;cursor:pointer;max-width:280px}
 .desc-bar .pill-btn:hover{background:var(--accent);color:#06121f;border-color:var(--accent)}
+.desc-bar .pill-btn.active{background:var(--accent);color:#06121f;border-color:var(--accent);font-weight:600}
 .icon-btn.active{background:var(--accent);color:#06121f;border-color:var(--accent);font-weight:600}
 .video.mv-grid{display:grid;gap:4px;background:#090b10;grid-template-columns:repeat(2,1fr)}
 .video.mv-many{grid-template-columns:repeat(3,1fr)}
@@ -212,152 +213,6 @@ const YT_HANDLES = {
   'associatedpress': 'UC52X5wxOL_s5yw0dQk7NtgA'
 };
 
-function get8worldExpectedTitles() {
-  const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Singapore' }));
-  const yyyy = now.getFullYear();
-  const mm = String(now.getMonth() + 1).padStart(2, '0');
-  const dd = String(now.getDate()).padStart(2, '0');
-  const dateStr = `（${yyyy}年${mm}月${dd}日）`;
-  const day = now.getDay();
-  const isWeekend = (day === 0 || day === 6);
-  const eveningShow = isWeekend ? `《狮城6点半》${dateStr}` : `《狮城有约》${dateStr}`;
-  const nightShow = `《晚间新闻》${dateStr}`;
-  const hour = now.getHours() + now.getMinutes() / 60;
-  return hour >= 20.5 ? [nightShow, eveningShow] : [eveningShow, nightShow];
-}
-
-async function fetchWithTimeout(url, ms = 5000) {
-  const res = await fetch(url, { signal: AbortSignal.timeout(ms) });
-  if (!res.ok) throw new Error('HTTP ' + res.status);
-  return res;
-}
-
-async function fetchFromPipedOrInvidious(channelId) {
-  const endpoints = [
-    { type: 'piped', url: `https://pipedapi.kavin.rocks/channel/${channelId}` },
-    { type: 'piped', url: `https://api.piped.private.coffee/channel/${channelId}` },
-    { type: 'inv',   url: `https://inv.nadeko.net/api/v1/channels/${channelId}/streams` },
-    { type: 'inv',   url: `https://invidious.nerdvpn.de/api/v1/channels/${channelId}/streams` }
-  ];
-
-  for (const ep of endpoints) {
-    try {
-      const res = await fetchWithTimeout(ep.url, 4500);
-      const data = await res.json();
-      if (ep.type === 'piped' && Array.isArray(data.relatedStreams)) {
-        return data.relatedStreams.map(s => ({
-          vid: (s.url || '').split('v=')[1]?.split('&')[0] || '',
-          title: s.title || '',
-          isLive: Boolean(s.duration === -1 || s.isLive)
-        })).filter(x => x.vid);
-      }
-      if (ep.type === 'inv') {
-        const list = Array.isArray(data) ? data : (data.videos || []);
-        if (list.length) {
-          return list.map(v => ({
-            vid: v.videoId || '',
-            title: v.title || '',
-            isLive: Boolean(v.liveNow || (v.isUpcoming === false && v.lengthSeconds === 0))
-          })).filter(x => x.vid);
-        }
-      }
-    } catch (e) {}
-  }
-  return [];
-}
-
-async function fetchWithFallbackProxies(targetUrl) {
-  const proxies = [
-    u => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
-    u => `https://corsproxy.io/?${encodeURIComponent(u)}`,
-    u => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(u)}`
-  ];
-  for (const makeProxy of proxies) {
-    try {
-      const res = await fetchWithTimeout(makeProxy(targetUrl), 5000);
-      const text = await res.text();
-      if (text && text.length > 500 && !text.includes('consent.youtube.com')) return text;
-    } catch (e) {}
-  }
-  return null;
-}
-
-function extractStreamsFromYouTubeHtml(html) {
-  const found = [];
-  const seen = new Set();
-  const match = html.match(/var ytInitialData\s*=\s*(\{.+?\});\s*<\/script>/s) ||
-                html.match(/ytInitialData"\s*:\s*(\{.+?\})\s*,\s*"/s);
-  if (match) {
-    try {
-      const walk = (node) => {
-        if (!node || typeof node !== 'object') return;
-        if (node.videoRenderer && node.videoRenderer.videoId) {
-          const vr = node.videoRenderer;
-          const vid = vr.videoId;
-          const title = vr.title?.runs?.map(r => r.text).join('') || vr.title?.simpleText || '';
-          const badges = JSON.stringify(vr.badges || '') + JSON.stringify(vr.thumbnailOverlays || '');
-          const isLive = /"style":"BADGE_STYLE_TYPE_LIVE_NOW"|"iconType":"LIVE"|"text":"LIVE"/i.test(badges);
-          if (!seen.has(vid)) {
-            seen.add(vid);
-            found.push({ vid, title, isLive });
-          }
-        }
-        if (Array.isArray(node)) node.forEach(walk);
-        else Object.values(node).forEach(walk);
-      };
-      walk(JSON.parse(match[1]));
-    } catch (e) {}
-  }
-  return found;
-}
-
-async function fetchChannelStreams(channelId, is8world) {
-  let entries = await fetchFromPipedOrInvidious(channelId);
-
-  if (!entries.length) {
-    const streamsUrl = is8world
-      ? 'https://www.youtube.com/@8worldSG/streams'
-      : `https://www.youtube.com/channel/${channelId}/streams`;
-    const html = await fetchWithFallbackProxies(streamsUrl);
-    if (html) entries = extractStreamsFromYouTubeHtml(html);
-  }
-
-  if (!entries.length) {
-    const rssXml = await fetchWithFallbackProxies(`https://www.youtube.com/feeds/videos.xml?channel_id=${channelId}`);
-    if (rssXml) {
-      const xml = new DOMParser().parseFromString(rssXml, 'text/xml');
-      entries = [...xml.querySelectorAll('entry')].map(e => ({
-        vid: e.querySelector('videoId')?.textContent || '',
-        title: e.querySelector('title')?.textContent || '',
-        isLive: /【直播】|\bLIVE\b/i.test(e.querySelector('title')?.textContent || '')
-      })).filter(x => x.vid);
-    }
-  }
-
-  if (!entries.length) return [];
-
-  if (is8world) {
-    const targets = get8worldExpectedTitles();
-    const prioritized = [];
-    for (const t of targets) {
-      const liveMatch = entries.find(e => e.isLive && e.title.includes(t));
-      if (liveMatch && !prioritized.some(p => p.vid === liveMatch.vid)) prioritized.push(liveMatch);
-    }
-    for (const e of entries) {
-      if (e.isLive && !prioritized.some(p => p.vid === e.vid)) prioritized.push(e);
-    }
-    for (const t of targets) {
-      const anyMatch = entries.find(e => e.title.includes(t));
-      if (anyMatch && !prioritized.some(p => p.vid === anyMatch.vid)) prioritized.push(anyMatch);
-    }
-    return prioritized.length ? prioritized : entries.slice(0, 8);
-  }
-
-  const live = entries.filter(e => e.isLive);
-  const rest = entries.filter(e => !e.isLive);
-  return [...live, ...rest].slice(0, 8);
-}
-
 const KEY='myChannels.v1';
 let S={custom:[],favs:[],removed:[],last:'cna',q:'1080',order:[]};
 try{const r=localStorage.getItem(KEY);if(r)S=Object.assign(S,JSON.parse(r))}catch(e){}
@@ -366,7 +221,6 @@ let cat='All',term='',cur=null,first=true,edit=false;
 let mvMode = false;
 let mvSlots = [];
 let mvActiveIdx = 0;
-const streamCache = {};
 const $=id=>document.getElementById(id);
 const all=()=>{const o=S.order||[],ix=c=>{const i=o.indexOf(c.id);return i<0?1e6:i};return D.concat(S.custom).filter(c=>!S.removed.includes(c.id)).sort((a,b)=>ix(a)-ix(b))};
 
@@ -394,12 +248,12 @@ function renderList(){const a=all(),v=visible();
  const activeIds = mvMode ? mvSlots.map(s => s.chId) : (cur ? [cur.id] : []);
  $('list').innerHTML=v.length?v.map(c=>`<button class="ch ${activeIds.includes(c.id)?'on':''}" data-id="${c.id}"><span class="n">${a.indexOf(c)+1}</span>${tile(c.name)}<span class="t"><b>${esc(c.name)}</b><small>${esc(c.cat)}</small></span>${edit?'<span class="mv"><span data-m="top" role="button" aria-label="Move to top" title="Move to top">⤒</span><span data-m="-1" role="button" aria-label="Move up">▲</span><span data-m="1" role="button" aria-label="Move down">▼</span></span>':`<span class="heart ${S.favs.includes(c.id)?'f':''}" data-h="${c.id}" role="button" aria-label="Favourite">${S.favs.includes(c.id)?'♥':'♡'}</span>`}</button>`).join(''):'<div class="empty">No channels here yet. Use “+ Add” to paste a livestream link.</div>'}
 
-function buildYtIframe(ch, videoOrChParam, mute) {
+function buildYtIframe(ch, videoOrChParam, mute, listIndex = 0) {
   const vq = {1080:'hd1080',720:'hd720',480:'large'}[S.q];
   if (videoOrChParam.startsWith('live_stream?channel=')) {
     const chId = videoOrChParam.split('=')[1].split('&')[0];
     const liveListId = 'UULV' + chId.slice(2);
-    return `<iframe title="${esc(ch.name)}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen src="https://www.youtube.com/embed/videoseries?list=${liveListId}&autoplay=1&rel=0&playsinline=1${vq?'&vq='+vq+'&hd=1':''}${mute?'&mute=1':''}"></iframe>`;
+    return `<iframe title="${esc(ch.name)}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen src="https://www.youtube.com/embed/videoseries?list=${liveListId}&index=${listIndex}&autoplay=1&rel=0&playsinline=1${vq?'&vq='+vq+'&hd=1':''}${mute?'&mute=1':''}"></iframe>`;
   }
   return `<iframe title="${esc(ch.name)}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen src="https://www.youtube.com/embed/${videoOrChParam}autoplay=1&rel=0&playsinline=1${vq?'&vq='+vq+'&hd=1':''}${mute?'&mute=1':''}"></iframe>`;
 }
@@ -409,7 +263,7 @@ function buildExtCard(ch) {
   return `<div class="ext"><h2>${esc(ch.name)}</h2><p>${esc(ch.desc)} This broadcaster doesn’t allow its stream to be embedded, so it plays on its own site.</p><div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center"><a class="go" href="${esc(ch.url)}" target="_blank" rel="noopener">Watch on ${host} ↗</a><button class="icon-btn" onclick="window.open('${esc(ch.url)}','tvbox_ext','width=1100,height=680')">Popout Window ⧉</button></div></div>`;
 }
 
-function renderDescStreamControls(ch, selectedVid) {
+function renderDescStreamControls(ch, selectedVid, activeIndex = 0) {
   const bar = $('istream');
   const y = ytId(ch.url);
   if (!y || !y.startsWith('ch:')) {
@@ -419,41 +273,31 @@ function renderDescStreamControls(ch, selectedVid) {
   const chId = y.slice(3);
   const is8world = (chId === 'UCUqUtr0w-K8W4AfpbHiYSaQ');
   const streamsPage = is8world ? 'https://www.youtube.com/@8worldSG/streams' : `https://www.youtube.com/channel/${chId}/streams`;
-  const list = streamCache[chId] || [];
 
-  let selectHtml = '';
-  if (list.length) {
-    selectHtml = `<select id="stream-sel" aria-label="Switch livestream" title="Switch active stream on this channel">
-      <option value="">Live Playlist (Auto)</option>
-      ${list.map((s, idx) => `<option value="${esc(s.vid)}" ${selectedVid === s.vid ? 'selected' : ''}>${s.isLive ? '🔴 ' : ''}Stream ${idx + 1}: ${esc(s.title.slice(0, 42))}${s.title.length > 42 ? '…' : ''}</option>`).join('')}
-    </select>`;
-  }
+  const pills = [0, 1, 2, 3].map(idx => {
+    const isSelected = !selectedVid && activeIndex === idx;
+    return `<button class="pill-btn ${isSelected ? 'active' : ''}" data-sidx="${idx}">Stream ${idx + 1}</button>`;
+  }).join('');
 
   bar.innerHTML = `
-    <button class="pill-btn" id="find-vid" title="Scan for individual stream titles">${list.length ? '↻ Refresh' : 'Find Live Stream'}</button>
-    ${selectHtml}
-    <button class="pill-btn" id="paste-vid" title="Paste a specific YouTube live link for this session">Paste Live Link</button>
+    ${pills}
+    <button class="pill-btn" id="paste-vid" title="Paste a specific YouTube live link">Paste Live Link</button>
     <a class="pill-btn" href="${streamsPage}" target="_blank" rel="noopener">All Streams ↗</a>
   `;
 
-  const applyVideoId = (vid) => {
-    if (mvMode && mvSlots[mvActiveIdx]) {
-      mvSlots[mvActiveIdx].vidOverride = vid;
-      renderMultiview(true);
-    } else if (cur && cur.id === ch.id) {
-      $('video').innerHTML = buildYtIframe(ch, vid ? `${vid}?` : `live_stream?channel=${chId}&`, false);
-    }
-    renderDescStreamControls(ch, vid);
-  };
-
-  $('find-vid').onclick = async () => {
-    $('find-vid').textContent = 'Searching…';
-    const streams = await fetchChannelStreams(chId, is8world);
-    streamCache[chId] = streams;
-    const bestVid = streams[0]?.vid || '';
-    applyVideoId(bestVid);
-    if (!streams.length) $('find-vid').textContent = 'Using Live Playlist';
-  };
+  bar.querySelectorAll('[data-sidx]').forEach(btn => {
+    btn.onclick = () => {
+      const idx = Number(btn.dataset.sidx);
+      if (mvMode && mvSlots[mvActiveIdx]) {
+        mvSlots[mvActiveIdx].vidOverride = '';
+        mvSlots[mvActiveIdx].listIdx = idx;
+        renderMultiview(true);
+      } else if (cur && cur.id === ch.id) {
+        $('video').innerHTML = buildYtIframe(ch, `live_stream?channel=${chId}&`, false, idx);
+        renderDescStreamControls(ch, '', idx);
+      }
+    };
+  });
 
   $('paste-vid').onclick = () => {
     const pasted = prompt('Paste the YouTube livestream link (e.g. https://www.youtube.com/live/...):');
@@ -463,17 +307,17 @@ function renderDescStreamControls(ch, selectedVid) {
       alert('Could not find a valid YouTube video ID in that link.');
       return;
     }
-    streamCache[chId] = [{ vid: parsed, title: 'Manual Live Link', isLive: true }, ...(streamCache[chId] || [])];
-    applyVideoId(parsed);
+    if (mvMode && mvSlots[mvActiveIdx]) {
+      mvSlots[mvActiveIdx].vidOverride = parsed;
+      renderMultiview(true);
+    } else if (cur && cur.id === ch.id) {
+      $('video').innerHTML = buildYtIframe(ch, `${parsed}?`, false);
+      renderDescStreamControls(ch, parsed, -1);
+    }
   };
-
-  const sel = $('stream-sel');
-  if (sel) {
-    sel.onchange = (e) => applyVideoId(e.target.value);
-  }
 }
 
-function syncInfoBar(ch, selectedVid) {
+function syncInfoBar(ch, selectedVid, activeIndex = 0) {
   const a = all();
   cur = ch;
   $('inum').textContent = a.indexOf(ch) + 1;
@@ -482,7 +326,7 @@ function syncInfoBar(ch, selectedVid) {
   $('open').href = ch.url;
   $('fav').textContent = S.favs.includes(ch.id) ? '♥' : '♡';
   $('qual').disabled = !ytId(ch.url);
-  renderDescStreamControls(ch, selectedVid || '');
+  renderDescStreamControls(ch, selectedVid || '', activeIndex);
 }
 
 function renderMultiview(user) {
@@ -498,7 +342,7 @@ function renderMultiview(user) {
       const param = y.startsWith('ch:')
         ? (slot.vidOverride ? `${slot.vidOverride}?` : `live_stream?channel=${y.slice(3)}&`)
         : `${y}?`;
-      mediaHtml = buildYtIframe(ch, param, idx !== mvActiveIdx || (first && !user));
+      mediaHtml = buildYtIframe(ch, param, idx !== mvActiveIdx || (first && !user), slot.listIdx || 0);
     } else {
       mediaHtml = buildExtCard(ch);
     }
@@ -517,7 +361,7 @@ function renderMultiview(user) {
       mvActiveIdx = Number(el.dataset.focus);
       const activeSlot = mvSlots[mvActiveIdx];
       const activeCh = a.find(c => c.id === activeSlot.chId);
-      if (activeCh) syncInfoBar(activeCh, activeSlot.vidOverride);
+      if (activeCh) syncInfoBar(activeCh, activeSlot.vidOverride, activeSlot.listIdx || 0);
       v.querySelectorAll('.mv-pane').forEach((p, i) => p.classList.toggle('active', i === mvActiveIdx));
     };
   });
@@ -533,7 +377,7 @@ function renderMultiview(user) {
       } else {
         renderMultiview(true);
         const activeCh = a.find(c => c.id === mvSlots[mvActiveIdx].chId);
-        if (activeCh) syncInfoBar(activeCh, mvSlots[mvActiveIdx].vidOverride);
+        if (activeCh) syncInfoBar(activeCh, mvSlots[mvActiveIdx].vidOverride, mvSlots[mvActiveIdx].listIdx || 0);
         renderList();
       }
     };
@@ -541,7 +385,7 @@ function renderMultiview(user) {
 
   const activeSlot = mvSlots[mvActiveIdx];
   const activeCh = a.find(c => c.id === activeSlot?.chId);
-  if (activeCh) syncInfoBar(activeCh, activeSlot.vidOverride);
+  if (activeCh) syncInfoBar(activeCh, activeSlot.vidOverride, activeSlot.listIdx || 0);
   renderList();
   hud();
 }
@@ -556,8 +400,8 @@ function toggleMultiview(force) {
     const firstCh = cur || a[0];
     const secondCh = a.find(c => c.id !== firstCh.id && c.cat === 'News') || a.find(c => c.id !== firstCh.id) || firstCh;
     mvSlots = [
-      { chId: firstCh.id, vidOverride: '' },
-      { chId: secondCh.id, vidOverride: '' }
+      { chId: firstCh.id, vidOverride: '', listIdx: 0 },
+      { chId: secondCh.id, vidOverride: '', listIdx: 0 }
     ];
     mvActiveIdx = 0;
     renderMultiview(true);
@@ -575,7 +419,7 @@ $('mvadd').onclick = () => {
   const a = all();
   const used = new Set(mvSlots.map(s => s.chId));
   const nextCh = a.find(c => !used.has(c.id) && c.cat === 'News') || a.find(c => !used.has(c.id)) || a[0];
-  mvSlots.push({ chId: nextCh.id, vidOverride: '' });
+  mvSlots.push({ chId: nextCh.id, vidOverride: '', listIdx: 0 });
   mvActiveIdx = mvSlots.length - 1;
   renderMultiview(true);
 };
@@ -584,37 +428,20 @@ function play(id,user){const a=all();cur=a.find(c=>c.id===id)||a[0];if(!cur){$('
  S.last=cur.id;save();
 
  if (mvMode) {
-   mvSlots[mvActiveIdx] = { chId: cur.id, vidOverride: '' };
+   mvSlots[mvActiveIdx] = { chId: cur.id, vidOverride: '', listIdx: 0 };
    renderMultiview(user);
    return;
  }
 
  const y=ytId(cur.url),v=$('video');
  v.className='video';
- syncInfoBar(cur, '');
+ syncInfoBar(cur, '', 0);
  if(y){
   if (y.startsWith('ch:')) {
     const chId = y.slice(3);
-    const is8world = (chId === 'UCUqUtr0w-K8W4AfpbHiYSaQ');
-    const cached = streamCache[chId];
-    const initialVid = (is8world && cached?.[0]?.vid) ? cached[0].vid : '';
-    v.innerHTML = buildYtIframe(cur, initialVid ? `${initialVid}?` : `live_stream?channel=${chId}&`, first && !user);
-    renderDescStreamControls(cur, initialVid);
-
-    if (!cached) {
-      fetchChannelStreams(chId, is8world).then(streams => {
-        streamCache[chId] = streams;
-        if (cur && ytId(cur.url) === y) {
-          const bestVid = (is8world && streams[0]) ? streams[0].vid : '';
-          if (bestVid) {
-            v.innerHTML = buildYtIframe(cur, `${bestVid}?`, false);
-          }
-          renderDescStreamControls(cur, bestVid);
-        }
-      });
-    }
+    v.innerHTML = buildYtIframe(cur, `live_stream?channel=${chId}&`, first && !user, 0);
   } else {
-    v.innerHTML = buildYtIframe(cur, `${y}?`, first && !user);
+    v.innerHTML = buildYtIframe(cur, `${y}?`, first && !user, 0);
   }
  }
  else v.innerHTML = buildExtCard(cur);
