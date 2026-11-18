@@ -102,7 +102,7 @@ body::before{display:none}
 .dial{position:fixed;z-index:6;top:22px;left:22px;min-width:84px;text-align:center;padding:8px 22px;border-radius:22px;font:600 56px/1 var(--num);letter-spacing:.04em;background:rgba(255,255,255,.14);-webkit-backdrop-filter:blur(26px) saturate(180%);backdrop-filter:blur(26px) saturate(180%);border:1px solid rgba(255,255,255,.3);box-shadow:inset 0 1px 0 rgba(255,255,255,.4),0 12px 40px rgba(0,0,0,.35);opacity:0;transform:scale(.96);transition:opacity .15s,transform .15s;pointer-events:none}
 .dial.on{opacity:1;transform:none}.dial small{display:block;font:500 14px var(--font);letter-spacing:0;color:#cfd6e4;margin-top:4px}
 
-/* === NEW: Description stream controls, Multiview grid (2 to 9+ tiles), & Drag-and-Drop === */
+/* Description stream controls, Multiview grid (2 to 9+ tiles), & Drag-and-Drop */
 .desc-bar{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:5px}
 .desc-bar .pill-btn,.desc-bar select{background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.24);border-radius:99px;padding:3px 10px;font-size:12px;color:#fff;text-decoration:none;cursor:pointer;max-width:280px}
 .desc-bar .pill-btn:hover{background:var(--accent);color:#06121f;border-color:var(--accent)}
@@ -121,15 +121,12 @@ body::before{display:none}
 body.dragging-ch .mv-pane iframe{pointer-events:none}
 .mv-pane.drag-over{border-color:#4aa3ff;box-shadow:inset 0 0 0 2px #4aa3ff,0 0 24px rgba(74,163,255,.45)}
 .mv-pane.drag-over::after{content:"Drop stream here";position:absolute;inset:0;display:grid;place-items:center;background:rgba(10,13,20,.65);color:#fff;font:600 18px var(--num);letter-spacing:.04em;z-index:4;pointer-events:none}
-/* === END NEW === */
 </style>
 </head>
 <body>
 <div class="app">
  <aside class="rail">
-  <!-- === NEW: Multiview and + Tile buttons next to Reorder === -->
   <div class="rail-top"><h1><svg id="logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="34" height="34" aria-hidden="true"><defs><linearGradient id="tb-base" x1="0" y1="0" x2="1" y2=".3"><stop offset="0" stop-color="#cfd6ea"/><stop offset="1" stop-color="#dcdfe9"/></linearGradient><radialGradient id="tb-blue" cx=".3" cy=".55" r=".62"><stop offset="0" stop-color="#1257d4"/><stop offset=".55" stop-color="#2468dc" stop-opacity=".85"/><stop offset="1" stop-color="#2f78e6" stop-opacity="0"/></radialGradient><radialGradient id="tb-haze" cx=".8" cy=".1" r=".5"><stop offset="0" stop-color="#8fb0ee" stop-opacity=".8"/><stop offset="1" stop-color="#8fb0ee" stop-opacity="0"/></radialGradient><filter id="tb-grain" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency="1.1" numOctaves="2" seed="7" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/></filter><clipPath id="tb-tile"><rect width="512" height="512" rx="112"/></clipPath><mask id="tb-cut" maskUnits="userSpaceOnUse" x="0" y="0" width="512" height="512"><rect width="512" height="512" fill="#fff"/><path d="M256 256 113 173M256 256 399 173M256 256V419" stroke="#000" stroke-width="12" stroke-linecap="round" fill="none"/><path d="M292 270 292 339 342 275Z" fill="#000" stroke="#000" stroke-width="10" stroke-linejoin="round"/></mask></defs><g clip-path="url(#tb-tile)"><rect width="512" height="512" fill="url(#tb-base)"/><rect width="512" height="512" fill="url(#tb-blue)"/><rect width="512" height="512" fill="url(#tb-haze)"/><rect width="512" height="512" filter="url(#tb-grain)" opacity=".45" style="mix-blend-mode:overlay"/></g><path mask="url(#tb-cut)" d="M256 118 375 187 375 325 256 394 137 325 137 187Z" fill="#fff" stroke="#fff" stroke-width="28" stroke-linejoin="round"/></svg>TV Box</h1><button class="icon-btn" id="mvb" title="Watch multiple streams side-by-side">Multiview</button><button class="icon-btn" id="mvadd" style="display:none" title="Add another screen tile">+ Tile</button><button class="icon-btn" id="ord">Reorder</button><button class="icon-btn" id="add">+ Add</button></div>
-  <!-- === END NEW === -->
   <input class="search" id="q" type="text" placeholder="Search channels" aria-label="Search channels">
   <div class="chips" id="chips"></div>
   <div class="list" id="list"></div>
@@ -140,9 +137,7 @@ body.dragging-ch .mv-pane iframe{pointer-events:none}
   <div class="scrim" id="scrim"></div><div class="edge" id="edge"></div>
   <div class="info">
    <div class="num" id="inum"></div>
-   <!-- === NEW: Stream switcher controls inside description area === -->
    <div><h2 id="iname"></h2><div class="d" id="idesc"></div><div class="desc-bar" id="istream"></div></div>
-   <!-- === END NEW === -->
    <div class="tools">
     <label for="qual">Quality</label>
     <select id="qual"><option value="1080">1080p</option><option value="720">720p</option><option value="480">480p</option><option value="auto">Auto</option></select>
@@ -172,13 +167,11 @@ const D=[
 ['cnao','CNA Originals','News','https://www.youtube.com/watch?v=9Y4kOQk_K3Y','Documentaries and features from CNA.'],
 ['bbg','Bloomberg Television','News','https://www.youtube.com/watch?v=QB5BNdBFujE','Markets, business and economy.'],
 ['bb0','Bloomberg Originals','News','https://www.youtube.com/live/DxmDPrfinXY?si=11kgajwEar211G4V','Markets, business and economy.'],
-// === NEW: Updated 8视界 URL to @8worldSG + added TVB News, Reuters, and AP News ===
 ['che','8视界','新聞','https://www.youtube.com/@8worldSG','下午6点半、10点新闻.'],
 ['bdk','八度空间','新聞','https://www.youtube.com/channel/UCJZTvwnKU0PBH4dhDJkFyZw','早上9点半、下午12点半、下午8点.'],
 ['tvb','無綫新聞 TVB News','新聞','https://news.tvb.com/tc/live/C','24小時無綫新聞台直播 (External player).'],
 ['reu','Reuters','News','https://www.youtube.com/channel/UChqUTb7kYRX8-EiaN3XFrSQ','Live global breaking news and raw feeds from Reuters.'],
 ['apn','AP News','News','https://www.youtube.com/channel/UC52X5wxOL_s5yw0dQk7NtgA','Live global coverage and press briefings from Associated Press.'],
-// === END NEW ===
 ['tvbs','TVBS 新聞','新聞','https://www.youtube.com/live/2mCSYvcfhtc?si=kpjj3BkdZRjWmJ2V','TVBS新聞'],
 ['ttv','台視新聞','新聞','https://www.youtube.com/channel/UC8ROUUjHzEQm-ndb69CX8Ww','台視新聞'],
 ['san','三立新聞','新聞','https://www.youtube.com/live/hGJkDZDchYI?si=QOSAFTOCSUlAyi0A','三立新聞'],
@@ -218,7 +211,6 @@ const D=[
 ['snm','Snoopy Music','Music','https://www.youtube.com/watch?v=XPIS0XA5lpk','Cosy Snoopy-themed music.']
 ].map(a=>({id:a[0],name:a[1],cat:a[2],url:a[3],desc:a[4]}));
 
-// === NEW: Map YouTube @handles & scrape /streams page directly for active LIVE badges ===
 const YT_HANDLES = {
   '8worldsg': 'UCUqUtr0w-K8W4AfpbHiYSaQ',
   'reuters': 'UChqUTb7kYRX8-EiaN3XFrSQ',
@@ -239,19 +231,57 @@ function get8worldExpectedTitles() {
   return hour >= 20.5 ? [nightShow, eveningShow] : [eveningShow, nightShow];
 }
 
+async function fetchWithTimeout(url, ms = 5000) {
+  const res = await fetch(url, { signal: AbortSignal.timeout(ms) });
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  return res;
+}
+
+async function fetchFromPipedOrInvidious(channelId) {
+  const endpoints = [
+    { type: 'piped', url: `https://pipedapi.kavin.rocks/channel/${channelId}` },
+    { type: 'piped', url: `https://api.piped.private.coffee/channel/${channelId}` },
+    { type: 'inv',   url: `https://inv.nadeko.net/api/v1/channels/${channelId}/streams` },
+    { type: 'inv',   url: `https://invidious.nerdvpn.de/api/v1/channels/${channelId}/streams` }
+  ];
+
+  for (const ep of endpoints) {
+    try {
+      const res = await fetchWithTimeout(ep.url, 4500);
+      const data = await res.json();
+      if (ep.type === 'piped' && Array.isArray(data.relatedStreams)) {
+        return data.relatedStreams.map(s => ({
+          vid: (s.url || '').split('v=')[1]?.split('&')[0] || '',
+          title: s.title || '',
+          isLive: Boolean(s.duration === -1 || s.isLive)
+        })).filter(x => x.vid);
+      }
+      if (ep.type === 'inv') {
+        const list = Array.isArray(data) ? data : (data.videos || []);
+        if (list.length) {
+          return list.map(v => ({
+            vid: v.videoId || '',
+            title: v.title || '',
+            isLive: Boolean(v.liveNow || (v.isUpcoming === false && v.lengthSeconds === 0))
+          })).filter(x => x.vid);
+        }
+      }
+    } catch (e) {}
+  }
+  return [];
+}
+
 async function fetchWithFallbackProxies(targetUrl) {
   const proxies = [
-    u => `https://corsproxy.io/?${encodeURIComponent(u)}`,
     u => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
+    u => `https://corsproxy.io/?${encodeURIComponent(u)}`,
     u => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(u)}`
   ];
   for (const makeProxy of proxies) {
     try {
-      const res = await fetch(makeProxy(targetUrl), { signal: AbortSignal.timeout(6000) });
-      if (res.ok) {
-        const text = await res.text();
-        if (text && text.length > 500) return text;
-      }
+      const res = await fetchWithTimeout(makeProxy(targetUrl), 5000);
+      const text = await res.text();
+      if (text && text.length > 500 && !text.includes('consent.youtube.com')) return text;
     } catch (e) {}
   }
   return null;
@@ -287,15 +317,19 @@ function extractStreamsFromYouTubeHtml(html) {
 }
 
 async function fetchChannelStreams(channelId, is8world) {
-  const streamsUrl = is8world
-    ? 'https://www.youtube.com/@8worldSG/streams'
-    : `https://www.youtube.com/channel/${channelId}/streams`;
+  // 1. Primary: Piped / Invidious JSON APIs
+  let entries = await fetchFromPipedOrInvidious(channelId);
 
-  // 1. Primary: Fetch the actual /streams tab HTML to catch currently LIVE streams
-  const html = await fetchWithFallbackProxies(streamsUrl);
-  let entries = html ? extractStreamsFromYouTubeHtml(html) : [];
+  // 2. Secondary: Scrape /streams HTML via CORS proxies
+  if (!entries.length) {
+    const streamsUrl = is8world
+      ? 'https://www.youtube.com/@8worldSG/streams'
+      : `https://www.youtube.com/channel/${channelId}/streams`;
+    const html = await fetchWithFallbackProxies(streamsUrl);
+    if (html) entries = extractStreamsFromYouTubeHtml(html);
+  }
 
-  // 2. Secondary fallback: YouTube RSS feed if HTML scrape was blocked
+  // 3. Tertiary: YouTube XML RSS feed
   if (!entries.length) {
     const rssXml = await fetchWithFallbackProxies(`https://www.youtube.com/feeds/videos.xml?channel_id=${channelId}`);
     if (rssXml) {
@@ -313,16 +347,13 @@ async function fetchChannelStreams(channelId, is8world) {
   if (is8world) {
     const targets = get8worldExpectedTitles();
     const prioritized = [];
-    // First: LIVE stream matching today's expected title
     for (const t of targets) {
       const liveMatch = entries.find(e => e.isLive && e.title.includes(t));
       if (liveMatch && !prioritized.some(p => p.vid === liveMatch.vid)) prioritized.push(liveMatch);
     }
-    // Second: Any currently LIVE stream on @8worldSG
     for (const e of entries) {
       if (e.isLive && !prioritized.some(p => p.vid === e.vid)) prioritized.push(e);
     }
-    // Third: Today's scheduled/recent title even if badge wasn't detected
     for (const t of targets) {
       const anyMatch = entries.find(e => e.title.includes(t));
       if (anyMatch && !prioritized.some(p => p.vid === anyMatch.vid)) prioritized.push(anyMatch);
@@ -334,19 +365,16 @@ async function fetchChannelStreams(channelId, is8world) {
   const rest = entries.filter(e => !e.isLive);
   return [...live, ...rest].slice(0, 8);
 }
-// === END NEW ===
 
 const KEY='myChannels.v1';
 let S={custom:[],favs:[],removed:[],last:'cna',q:'1080',order:[]};
 try{const r=localStorage.getItem(KEY);if(r)S=Object.assign(S,JSON.parse(r))}catch(e){}
 const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}};
 let cat='All',term='',cur=null,first=true,edit=false;
-// === NEW: Multiview & stream cache state ===
 let mvMode = false;
 let mvSlots = [];
 let mvActiveIdx = 0;
 const streamCache = {};
-// === END NEW ===
 const $=id=>document.getElementById(id);
 const all=()=>{const o=S.order||[],ix=c=>{const i=o.indexOf(c.id);return i<0?1e6:i};return D.concat(S.custom).filter(c=>!S.removed.includes(c.id)).sort((a,b)=>ix(a)-ix(b))};
 
@@ -354,13 +382,11 @@ function ytId(u){try{const x=new URL(u),h=x.hostname.replace('www.','');
  if(h==='youtu.be')return x.pathname.slice(1)||null;
  if(h.endsWith('youtube.com')){if(x.searchParams.get('v'))return x.searchParams.get('v');
   if(x.searchParams.get('channel'))return 'ch:'+x.searchParams.get('channel');
-  // === NEW: Support @handle and @handle/streams URLs ===
   const handleMatch = x.pathname.match(/^\/@([\w.-]+)/);
   if (handleMatch) {
     const mapped = YT_HANDLES[handleMatch[1].toLowerCase()];
     if (mapped) return 'ch:' + mapped;
   }
-  // === END NEW ===
   const c=x.pathname.match(/^\/channel\/(UC[\w-]{22})/);if(c)return 'ch:'+c[1];const m=x.pathname.match(/^\/(live|embed|shorts)\/([\w-]+)/);return m?m[2]:null}}catch(e){}return null}
 function tile(name){let h=0;for(const ch of name)h=(h*31+ch.charCodeAt(0))%360;
  const w=name.split(/\s+/);const ini=(w.length>1?w[0][0]+w[1][0]:name.slice(0,3)).toUpperCase();
@@ -372,7 +398,6 @@ function renderChips(){const cats=['All','Favourites',...new Set(all().map(c=>c.
  $('chips').innerHTML=cats.map(c=>`<button class="chip" aria-pressed="${c===cat}" data-c="${esc(c)}">${esc(c)}</button>`).join('');
  $('cats').innerHTML=[...new Set(all().map(c=>c.cat))].map(c=>`<option value="${esc(c)}">`).join('')}
 
-// === NEW: Draggable channel list items + active multiview highlighting ===
 function renderList(){const a=all(),v=visible();
  const activeIds = mvMode ? mvSlots.map(s => s.chId) : (cur ? [cur.id] : []);
  $('list').innerHTML=v.length?v.map(c=>`<button class="ch ${activeIds.includes(c.id)?'on':''}" data-id="${c.id}" draggable="${!edit}"><span class="n">${a.indexOf(c)+1}</span>${tile(c.name)}<span class="t"><b>${esc(c.name)}</b><small>${esc(c.cat)}</small></span>${edit?'<span class="mv"><span data-m="top" role="button" aria-label="Move to top" title="Move to top">⤒</span><span data-m="-1" role="button" aria-label="Move up">▲</span><span data-m="1" role="button" aria-label="Move down">▼</span></span>':`<span class="heart ${S.favs.includes(c.id)?'f':''}" data-h="${c.id}" role="button" aria-label="Favourite">${S.favs.includes(c.id)?'♥':'♡'}</span>`}</button>`).join(''):'<div class="empty">No channels here yet. Use “+ Add” to paste a livestream link.</div>';
@@ -389,9 +414,7 @@ function renderList(){const a=all(),v=visible();
    };
  });
 }
-// === END NEW ===
 
-// === NEW: Helpers for YouTube iframe, external players, description stream bar, & Multiview ===
 function buildYtIframe(ch, videoOrChParam, mute) {
   const vq = {1080:'hd1080',720:'hd720',480:'large'}[S.q];
   return `<iframe title="${esc(ch.name)}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen src="https://www.youtube.com/embed/${videoOrChParam}autoplay=1&rel=0&playsinline=1${vq?'&vq='+vq+'&hd=1':''}${mute?'&mute=1':''}"></iframe>`;
@@ -423,36 +446,46 @@ function renderDescStreamControls(ch, selectedVid) {
   }
 
   bar.innerHTML = `
-    <button class="pill-btn" id="find-vid" title="Fetch latest & concurrent live streams">${list.length ? '↻ Refresh Streams' : 'Find Latest Stream'}</button>
+    <button class="pill-btn" id="find-vid" title="Auto-detect active stream">${list.length ? '↻ Refresh' : 'Find Live Stream'}</button>
     ${selectHtml}
+    <button class="pill-btn" id="paste-vid" title="Paste a specific YouTube live link for this session">Paste Live Link</button>
     <a class="pill-btn" href="${streamsPage}" target="_blank" rel="noopener">All Streams ↗</a>
   `;
+
+  const applyVideoId = (vid) => {
+    if (mvMode && mvSlots[mvActiveIdx]) {
+      mvSlots[mvActiveIdx].vidOverride = vid;
+      renderMultiview(true);
+    } else if (cur && cur.id === ch.id) {
+      $('video').innerHTML = buildYtIframe(ch, vid ? `${vid}?` : `live_stream?channel=${chId}&`, false);
+    }
+    renderDescStreamControls(ch, vid);
+  };
 
   $('find-vid').onclick = async () => {
     $('find-vid').textContent = 'Searching…';
     const streams = await fetchChannelStreams(chId, is8world);
     streamCache[chId] = streams;
     const bestVid = streams[0]?.vid || '';
-    if (mvMode && mvSlots[mvActiveIdx]) {
-      mvSlots[mvActiveIdx].vidOverride = bestVid;
-      renderMultiview(true);
-    } else if (cur && cur.id === ch.id) {
-      $('video').innerHTML = buildYtIframe(ch, bestVid ? `${bestVid}?` : `live_stream?channel=${chId}&`, false);
+    applyVideoId(bestVid);
+    if (!streams.length) $('find-vid').textContent = 'Not found (use Paste)';
+  };
+
+  $('paste-vid').onclick = () => {
+    const pasted = prompt('Paste the YouTube livestream link (e.g. https://www.youtube.com/live/...):');
+    if (!pasted) return;
+    const parsed = ytId(pasted.trim()) || (/^[\w-]{11}$/.test(pasted.trim()) ? pasted.trim() : null);
+    if (!parsed || parsed.startsWith('ch:')) {
+      alert('Could not find a valid YouTube video ID in that link.');
+      return;
     }
-    renderDescStreamControls(ch, bestVid);
+    streamCache[chId] = [{ vid: parsed, title: 'Manual Live Link', isLive: true }, ...(streamCache[chId] || [])];
+    applyVideoId(parsed);
   };
 
   const sel = $('stream-sel');
   if (sel) {
-    sel.onchange = (e) => {
-      const vid = e.target.value;
-      if (mvMode && mvSlots[mvActiveIdx]) {
-        mvSlots[mvActiveIdx].vidOverride = vid;
-        renderMultiview(true);
-      } else {
-        $('video').innerHTML = buildYtIframe(ch, vid ? `${vid}?` : `live_stream?channel=${chId}&`, false);
-      }
-    };
+    sel.onchange = (e) => applyVideoId(e.target.value);
   }
 }
 
@@ -585,24 +618,20 @@ $('mvadd').onclick = () => {
   mvActiveIdx = mvSlots.length - 1;
   renderMultiview(true);
 };
-// === END NEW ===
 
 function play(id,user){const a=all();cur=a.find(c=>c.id===id)||a[0];if(!cur){$('video').innerHTML='<div class="ext"><p>No channels left. Add one to start watching.</p></div>';return}
  S.last=cur.id;save();
 
- // === NEW: In Multiview mode, clicking a channel replaces the active (blue-bordered) tile ===
  if (mvMode) {
    mvSlots[mvActiveIdx] = { chId: cur.id, vidOverride: '' };
    renderMultiview(user);
    return;
  }
- // === END NEW ===
 
  const y=ytId(cur.url),v=$('video');
  v.className='video';
  syncInfoBar(cur, '');
  if(y){
-  // === NEW: Resolve channel streams (8world, Reuters, AP, etc.) & update description controls ===
   if (y.startsWith('ch:')) {
     const chId = y.slice(3);
     const is8world = (chId === 'UCUqUtr0w-K8W4AfpbHiYSaQ');
@@ -626,7 +655,6 @@ function play(id,user){const a=all();cur=a.find(c=>c.id===id)||a[0];if(!cur){$('
   } else {
     v.innerHTML = buildYtIframe(cur, `${y}?`, first && !user);
   }
-  // === END NEW ===
  }
  else v.innerHTML = buildExtCard(cur);
  first=false;renderList();hud()}
@@ -658,7 +686,6 @@ $('save').onclick=()=>{const raw=$('f-url').value.trim();if(/<video/i.test(raw))
  const m=raw.match(/src="([^"]+)"/),url=/^UC[\w-]{22}$/.test(raw)?'https://www.youtube.com/channel/'+raw:m?m[1]:raw,name=$('f-name').value.trim();
  const handleCheck = url.match(/youtube\.com\/@([\w.-]+)/i);
  if (handleCheck && YT_HANDLES[handleCheck[1].toLowerCase()]) {
-   // Known handle — let it pass
  } else if(/youtube\.com\/(@|c\/|user\/)/.test(url)){$('err').textContent='That is a channel name link. Open the channel’s About tab, copy its channel ID (starts with UC) and paste that instead.';return}
  try{const u=new URL(url);if(!/^https?:$/.test(u.protocol))throw 0}catch(e){$('err').textContent='Paste a full link starting with https://';return}
  if(!name){$('err').textContent='Give the channel a name.';return}
