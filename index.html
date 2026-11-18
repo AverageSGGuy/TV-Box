@@ -122,7 +122,7 @@ body::before{display:none}
     <label for="qual">Quality</label>
     <select id="qual"><option value="1080">1080p</option><option value="720">720p</option><option value="480">480p</option><option value="auto">Auto</option></select>
     <button class="icon-btn" id="fav" aria-label="Toggle favourite">♡</button>
-    <button class="icon-btn" id="del">Remove</button>
+    <button class="icon-btn" id="rl" aria-label="Reload stream" title="Reload stream (R)">⟳</button><button class="icon-btn" id="del">Remove</button>
     <a class="icon-btn" id="open" href="#" target="_blank" rel="noopener" style="text-decoration:none">Open ↗</a>
    </div>
   </div>
@@ -134,7 +134,7 @@ body::before{display:none}
  <h3 id="mt">Add a channel</h3>
  <label>Livestream link<input type="url" id="f-url" placeholder="YouTube link, channel ID or embed code"></label>
  <label>Channel name<input type="text" id="f-name" maxlength="40"></label>
- <label>Category<input type="text" id="f-cat" list="cats" maxlength="24" placeholder="News, 新聞, Kids, 臺灣, Korea, Entertainment, Music"></label>
+ <label>Category<input type="text" id="f-cat" list="cats" maxlength="24" placeholder="News, 新聞, Music, Kids, 臺灣"></label>
  <datalist id="cats"></datalist>
  <label>Short description<textarea id="f-desc" rows="2" maxlength="120"></textarea></label>
  <div class="err" id="err"></div>
@@ -232,13 +232,14 @@ $('list').onclick=e=>{const mv=e.target.closest('[data-m]');if(mv){e.stopPropaga
  const h=e.target.closest('[data-h]');
  if(h){e.stopPropagation();const id=h.dataset.h,i=S.favs.indexOf(id);i<0?S.favs.push(id):S.favs.splice(i,1);save();$('fav').textContent=cur&&S.favs.includes(cur.id)?'♥':'♡';renderList();return}
  const b=e.target.closest('.ch');if(b)play(b.dataset.id,true)};
+$('rl').onclick=()=>{if(cur)play(cur.id,true)};
 $('qual').onchange=e=>{S.q=e.target.value;save();play(cur.id,true)};
 $('fav').onclick=()=>{if(!cur)return;const i=S.favs.indexOf(cur.id);i<0?S.favs.push(cur.id):S.favs.splice(i,1);save();$('fav').textContent=S.favs.includes(cur.id)?'♥':'♡';renderList()};
 $('del').onclick=()=>{if(!cur||!confirm('Remove “'+cur.name+'” from your list?'))return;const c=cur;
  if(S.custom.some(x=>x.id===c.id))S.custom=S.custom.filter(x=>x.id!==c.id);else S.removed.push(c.id);
  save();renderChips();play(all()[0]&&all()[0].id,true)};
-document.addEventListener('keydown',e=>{if(/INPUT|TEXTAREA|SELECT/.test(e.target.tagName)||$('modal').classList.contains('open'))return;
- if(/^\d$/.test(e.key)){dial(e.key);return}if(e.key==='Enter'&&buf){goDial();return}if(e.key==='m')setMenu(!app.classList.contains('menu'));if(e.key==='f')fs(!document.body.classList.contains('fs'));if(e.key==='Escape')setMenu(false);if(e.key==='ArrowDown'){e.preventDefault();zap(1)}if(e.key==='ArrowUp'){e.preventDefault();zap(-1)}});
+document.addEventListener('keydown',e=>{if(/INPUT|TEXTAREA|SELECT/.test(e.target.tagName)||$('modal').classList.contains('open')||e.ctrlKey||e.metaKey||e.altKey)return;
+ if(/^\d$/.test(e.key)){dial(e.key);return}if(e.key==='Enter'&&buf){goDial();return}if(e.key==='r'&&cur){play(cur.id,true);return}if(e.key==='m')setMenu(!app.classList.contains('menu'));if(e.key==='f')fs(!document.body.classList.contains('fs'));if(e.key==='Escape')setMenu(false);if(e.key==='ArrowDown'){e.preventDefault();zap(1)}if(e.key==='ArrowUp'){e.preventDefault();zap(-1)}});
 
 const openM=()=>{['f-url','f-name','f-cat','f-desc'].forEach(i=>$(i).value='');$('err').textContent='';$('modal').classList.add('open');$('f-url').focus()};
 const closeM=()=>$('modal').classList.remove('open');
