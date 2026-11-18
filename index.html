@@ -134,7 +134,7 @@ body::before{display:none}
  <h3 id="mt">Add a channel</h3>
  <label>Livestream link<input type="url" id="f-url" placeholder="YouTube link, channel ID or embed code"></label>
  <label>Channel name<input type="text" id="f-name" maxlength="40"></label>
- <label>Category<input type="text" id="f-cat" list="cats" maxlength="24" placeholder="News, 新聞, Kids, 臺灣, Korea, Music"></label>
+ <label>Category<input type="text" id="f-cat" list="cats" maxlength="24" placeholder="News, 新聞, Kids, 臺灣, Korea, Entertainment, Music"></label>
  <datalist id="cats"></datalist>
  <label>Short description<textarea id="f-desc" rows="2" maxlength="120"></textarea></label>
  <div class="err" id="err"></div>
@@ -145,10 +145,10 @@ body::before{display:none}
 const D=[
 ['cna','CNA','News','https://www.youtube.com/live/-PWMxjBgr0k?si=T0boxcibhUSUEfF3','Asia-focused 24/7 news from Singapore.'],
 ['cnao','CNA Originals','News','https://www.youtube.com/watch?v=9Y4kOQk_K3Y','Documentaries and features from CNA.'],
-['che','8视界','新聞','https://www.youtube.com/channel/UCUqUtr0w-K8W4AfpbHiYSaQ','下午6点半、10点新闻.'],
-['bdk','八度空间','新聞','https://www.youtube.com/channel/UCJZTvwnKU0PBH4dhDJkFyZw','早上9点半、下午12点半、下午8点.'],
 ['bbg','Bloomberg Television','News','https://www.youtube.com/watch?v=QB5BNdBFujE','Markets, business and economy.'],
 ['bb0','Bloomberg Originals','News','https://www.youtube.com/live/DxmDPrfinXY?si=11kgajwEar211G4V','Markets, business and economy.'],
+['che','8视界','新聞','https://www.youtube.com/channel/UCUqUtr0w-K8W4AfpbHiYSaQ','下午6点半、10点新闻.'],
+['bdk','八度空间','新聞','https://www.youtube.com/channel/UCJZTvwnKU0PBH4dhDJkFyZw','早上9点半、下午12点半、下午8点.'],
 ['tvbs','TVBS 新聞','新聞','https://www.youtube.com/live/2mCSYvcfhtc?si=kpjj3BkdZRjWmJ2V','TVBS新聞'],
 ['ttv','台視新聞','新聞','https://www.youtube.com/channel/UC8ROUUjHzEQm-ndb69CX8Ww','台視新聞'],
 ['san','三立新聞','新聞','https://www.youtube.com/live/hGJkDZDchYI?si=QOSAFTOCSUlAyi0A','三立新聞'],
@@ -163,9 +163,12 @@ const D=[
 ['cgtn','CGTN','News','https://www.youtube.com/watch?v=0i7n3r01L2U','China Global Television Network in English.'],
 ['aja','Al Jazeera','News','https://www.youtube.com/watch?v=gCNeDWCI0vo','International news from Doha.'],
 ['cnn','CNN','News','https://www.youtube.com/watch?v=GotlA1KKWoo','Live news from CNN.'],
+['sky','Sky News','News','https://www.youtube.com/live/53SxFKpbKDE?si=jnEdO4TsZWv7TWy2','Live news from Sky News.'],
+['dwn','DW News','News','https://www.youtube.com/live/LuKwFajn37U?si=qcFPdXIPcARsP15O','Live news from DW News.'],
+['cbct','CBC News Toronto','News','https://www.youtube.com/live/XnKMRk7RLz8?si=QqjGCGIWYVbny4oL','Live news from CBC News Toronto.'],
+['nhk','NHK Japan','News','https://www.youtube.com/live/IimtbuqYIE8?si=SAK7J2I9P_cgrN97','Live news from NHK World Japan.'],
+['abca','ABC News Australia','News','https://www.youtube.com/live/vOTiJkg1voo?si=NPS53_t5QKaWLy66 ','Live news from ABC News Australia.'],
 ['awa','Astro Awani','News','https://www.youtube.com/watch?v=mkVyNaGee8A','Malaysian news in Bahasa Melayu.'],
-['acm','Animal Crossing Music','Music','https://www.youtube.com/watch?v=5RuM_n8lCRU','Relaxing Animal Crossing soundtrack.'],
-['snm','Snoopy Music','Music','https://www.youtube.com/watch?v=XPIS0XA5lpk','Cosy Snoopy-themed music.'],
 ['pnf','Phineas and Ferb','Kids','https://www.youtube.com/watch?v=_HviSyC7zSU','Summer-vacation adventures, non-stop.'],
 ['blu','Bluey','Kids','https://www.youtube.com/watch?v=RHUauMcYlX0','Bluey episodes for the whole family.'],
 ['blt','Baby Looney Tunes','Kids','https://www.youtube.com/live/XfZetbS9084?si=PzS8md_D9kAcQtSJ','The best Baby Looney Tunes episodes with fun stories, imaginative play, teamwork and more.'],
@@ -176,7 +179,13 @@ const D=[
 ['ebcv','東森綜合2台','臺灣','https://www.youtube.com/live/cimbpAZUjzw?si=J3uIL3N5EKUz6Doe','東森綜合2台'],
 ['hdn','綜藝大熱門','臺灣','https://www.youtube.com/live/5I-1d5lZ3EE?si=4K1AHcn7eiHRGG3u','綜藝大熱門'],
 ['zyd','綜藝大集會','臺灣','https://www.youtube.com/live/xQwzLc7hWOI?si=6d_3lBvXtfSsn_4e','綜藝大集會'],
-['kbs','KBS Korea','Korea','https://www.youtube.com/live/OxQQsIvJTTU?si=zGwcOsFYHdCdKTaZ','KBS Korea']
+['bne','Breaking & Entering','Entertainment','https://www.youtube.com/channel/UCUqUtr0w-K8W4AfpbHiYSaQ','Breaking & Entering show. Tuesdays, Wednesdays, Thursdays at 1 AM SGT'],
+['kbs','KBS Korea','Korea','https://www.youtube.com/live/OxQQsIvJTTU?si=zGwcOsFYHdCdKTaZ','KBS Korea'],
+['acmc','Animal Crossing Cafe','Music','https://www.youtube.com/watch?v=5RuM_n8lCRU','Relaxing Animal Crossing soundtrack.'],
+['acmj','Animal Crossing Jazz','Music','https://www.youtube.com/live/FIyyoRGeT20?si=a6YZPHuoNc3OF0jD','Relaxing Animal Crossing soundtrack.'], 
+['lfh','Lofi Girl Hip Hop','Music','https://www.youtube.com/live/rFZHOHl-L8A?si=V0GqF0hgkW6KOnPL','Lofi Girl Hip Hop.'],
+['lfj','Lofi Girl Jazz','Music','https://www.youtube.com/watch?v=5RuM_n8lCRU','Lofi Girl Jazz.'],
+['snm','Snoopy Music','Music','https://www.youtube.com/watch?v=XPIS0XA5lpk','Cosy Snoopy-themed music.']
 ].map(a=>({id:a[0],name:a[1],cat:a[2],url:a[3],desc:a[4]}));
 
 const KEY='myChannels.v1';
