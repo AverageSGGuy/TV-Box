@@ -102,17 +102,30 @@ body::before{display:none}
 .dial{position:fixed;z-index:6;top:22px;left:22px;min-width:84px;text-align:center;padding:8px 22px;border-radius:22px;font:600 56px/1 var(--num);letter-spacing:.04em;background:rgba(255,255,255,.14);-webkit-backdrop-filter:blur(26px) saturate(180%);backdrop-filter:blur(26px) saturate(180%);border:1px solid rgba(255,255,255,.3);box-shadow:inset 0 1px 0 rgba(255,255,255,.4),0 12px 40px rgba(0,0,0,.35);opacity:0;transform:scale(.96);transition:opacity .15s,transform .15s;pointer-events:none}
 .dial.on{opacity:1;transform:none}.dial small{display:block;font:500 14px var(--font);letter-spacing:0;color:#cfd6e4;margin-top:4px}
 
-/* === NEW: Subtle helper banner for scheduled streams (like 8world) === */
-.stream-bar{position:absolute;top:12px;left:14px;z-index:4;display:flex;gap:8px;align-items:center;background:rgba(18,21,27,.82);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,.22);border-radius:99px;padding:6px 14px;font-size:13px;color:var(--text)}
-.stream-bar a,.stream-bar button{background:rgba(255,255,255,.14);border:0;border-radius:99px;padding:3px 10px;font-size:12px;color:#fff;text-decoration:none;cursor:pointer}
-.stream-bar a:hover,.stream-bar button:hover{background:var(--accent);color:#06121f}
+/* === NEW: Description stream controls + Multiview split-screen grid === */
+.desc-bar{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:5px}
+.desc-bar .pill-btn,.desc-bar select{background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.24);border-radius:99px;padding:3px 10px;font-size:12px;color:#fff;text-decoration:none;cursor:pointer;max-width:280px}
+.desc-bar .pill-btn:hover{background:var(--accent);color:#06121f;border-color:var(--accent)}
+.icon-btn.active{background:var(--accent);color:#06121f;border-color:var(--accent);font-weight:600}
+.video.mv-grid{display:grid;gap:4px;background:#090b10}
+.video.mv-2{grid-template-columns:1fr 1fr}
+.video.mv-3,.video.mv-4{grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr}
+.mv-pane{position:relative;width:100%;height:100%;background:#000;overflow:hidden;border:2px solid transparent}
+.mv-pane.active{border-color:var(--accent)}
+.mv-pane iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+.mv-tag{position:absolute;top:10px;left:10px;z-index:3;display:flex;gap:6px;align-items:center;background:rgba(12,15,22,.82);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.22);border-radius:99px;padding:4px 10px;font-size:12px;cursor:pointer}
+.mv-pane.active .mv-tag{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.mv-tag button{background:none;border:0;color:var(--mute);cursor:pointer;padding:0 2px;font-size:13px}
+.mv-tag button:hover{color:#ff8a8a}
 /* === END NEW === */
 </style>
 </head>
 <body>
 <div class="app">
  <aside class="rail">
-  <div class="rail-top"><h1><svg id="logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="34" height="34" aria-hidden="true"><defs><linearGradient id="tb-base" x1="0" y1="0" x2="1" y2=".3"><stop offset="0" stop-color="#cfd6ea"/><stop offset="1" stop-color="#dcdfe9"/></linearGradient><radialGradient id="tb-blue" cx=".3" cy=".55" r=".62"><stop offset="0" stop-color="#1257d4"/><stop offset=".55" stop-color="#2468dc" stop-opacity=".85"/><stop offset="1" stop-color="#2f78e6" stop-opacity="0"/></radialGradient><radialGradient id="tb-haze" cx=".8" cy=".1" r=".5"><stop offset="0" stop-color="#8fb0ee" stop-opacity=".8"/><stop offset="1" stop-color="#8fb0ee" stop-opacity="0"/></radialGradient><filter id="tb-grain" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency="1.1" numOctaves="2" seed="7" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/></filter><clipPath id="tb-tile"><rect width="512" height="512" rx="112"/></clipPath><mask id="tb-cut" maskUnits="userSpaceOnUse" x="0" y="0" width="512" height="512"><rect width="512" height="512" fill="#fff"/><path d="M256 256 113 173M256 256 399 173M256 256V419" stroke="#000" stroke-width="12" stroke-linecap="round" fill="none"/><path d="M292 270 292 339 342 275Z" fill="#000" stroke="#000" stroke-width="10" stroke-linejoin="round"/></mask></defs><g clip-path="url(#tb-tile)"><rect width="512" height="512" fill="url(#tb-base)"/><rect width="512" height="512" fill="url(#tb-blue)"/><rect width="512" height="512" fill="url(#tb-haze)"/><rect width="512" height="512" filter="url(#tb-grain)" opacity=".45" style="mix-blend-mode:overlay"/></g><path mask="url(#tb-cut)" d="M256 118 375 187 375 325 256 394 137 325 137 187Z" fill="#fff" stroke="#fff" stroke-width="28" stroke-linejoin="round"/></svg>TV Box</h1><button class="icon-btn" id="ord">Reorder</button><button class="icon-btn" id="add">+ Add</button></div>
+  <!-- === NEW: Added Multiview button next to Reorder === -->
+  <div class="rail-top"><h1><svg id="logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="34" height="34" aria-hidden="true"><defs><linearGradient id="tb-base" x1="0" y1="0" x2="1" y2=".3"><stop offset="0" stop-color="#cfd6ea"/><stop offset="1" stop-color="#dcdfe9"/></linearGradient><radialGradient id="tb-blue" cx=".3" cy=".55" r=".62"><stop offset="0" stop-color="#1257d4"/><stop offset=".55" stop-color="#2468dc" stop-opacity=".85"/><stop offset="1" stop-color="#2f78e6" stop-opacity="0"/></radialGradient><radialGradient id="tb-haze" cx=".8" cy=".1" r=".5"><stop offset="0" stop-color="#8fb0ee" stop-opacity=".8"/><stop offset="1" stop-color="#8fb0ee" stop-opacity="0"/></radialGradient><filter id="tb-grain" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency="1.1" numOctaves="2" seed="7" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/></filter><clipPath id="tb-tile"><rect width="512" height="512" rx="112"/></clipPath><mask id="tb-cut" maskUnits="userSpaceOnUse" x="0" y="0" width="512" height="512"><rect width="512" height="512" fill="#fff"/><path d="M256 256 113 173M256 256 399 173M256 256V419" stroke="#000" stroke-width="12" stroke-linecap="round" fill="none"/><path d="M292 270 292 339 342 275Z" fill="#000" stroke="#000" stroke-width="10" stroke-linejoin="round"/></mask></defs><g clip-path="url(#tb-tile)"><rect width="512" height="512" fill="url(#tb-base)"/><rect width="512" height="512" fill="url(#tb-blue)"/><rect width="512" height="512" fill="url(#tb-haze)"/><rect width="512" height="512" filter="url(#tb-grain)" opacity=".45" style="mix-blend-mode:overlay"/></g><path mask="url(#tb-cut)" d="M256 118 375 187 375 325 256 394 137 325 137 187Z" fill="#fff" stroke="#fff" stroke-width="28" stroke-linejoin="round"/></svg>TV Box</h1><button class="icon-btn" id="mvb" title="Watch multiple streams side-by-side">Multiview</button><button class="icon-btn" id="ord">Reorder</button><button class="icon-btn" id="add">+ Add</button></div>
+  <!-- === END NEW === -->
   <input class="search" id="q" type="text" placeholder="Search channels" aria-label="Search channels">
   <div class="chips" id="chips"></div>
   <div class="list" id="list"></div>
@@ -123,7 +136,9 @@ body::before{display:none}
   <div class="scrim" id="scrim"></div><div class="edge" id="edge"></div>
   <div class="info">
    <div class="num" id="inum"></div>
-   <div><h2 id="iname"></h2><div class="d" id="idesc"></div></div>
+   <!-- === NEW: Added #istream container inside description block === -->
+   <div><h2 id="iname"></h2><div class="d" id="idesc"></div><div class="desc-bar" id="istream"></div></div>
+   <!-- === END NEW === -->
    <div class="tools">
     <label for="qual">Quality</label>
     <select id="qual"><option value="1080">1080p</option><option value="720">720p</option><option value="480">480p</option><option value="auto">Auto</option></select>
@@ -155,6 +170,8 @@ const D=[
 ['bb0','Bloomberg Originals','News','https://www.youtube.com/live/DxmDPrfinXY?si=11kgajwEar211G4V','Markets, business and economy.'],
 ['che','8视界','新聞','https://www.youtube.com/channel/UCUqUtr0w-K8W4AfpbHiYSaQ','下午6点半、10点新闻.'],
 ['bdk','八度空间','新聞','https://www.youtube.com/channel/UCJZTvwnKU0PBH4dhDJkFyZw','早上9点半、下午12点半、下午8点.'],
+['reu','Reuters','News','https://www.youtube.com/channel/UChqUTb7kYRX8-EiaN3XFrSQ','Live global breaking news and raw feeds from Reuters.'],
+['apn','AP News','News','https://www.youtube.com/channel/UC52X5wxOL_s5yw0dQk7NtgA','Live global coverage and press briefings from Associated Press.'],
 ['tvbs','TVBS 新聞','新聞','https://www.youtube.com/live/2mCSYvcfhtc?si=kpjj3BkdZRjWmJ2V','TVBS新聞'],
 ['ttv','台視新聞','新聞','https://www.youtube.com/channel/UC8ROUUjHzEQm-ndb69CX8Ww','台視新聞'],
 ['san','三立新聞','新聞','https://www.youtube.com/live/hGJkDZDchYI?si=QOSAFTOCSUlAyi0A','三立新聞'],
@@ -196,10 +213,12 @@ const D=[
 
 // === NEW: Map YouTube @handles to their UC Channel IDs ===
 const YT_HANDLES = {
-  '8worldsg': 'UCUqUtr0w-K8W4AfpbHiYSaQ'
+  '8worldsg': 'UCUqUtr0w-K8W4AfpbHiYSaQ',
+  'reuters': 'UChqUTb7kYRX8-EiaN3XFrSQ',
+  'associatedpress': 'UC52X5wxOL_s5yw0dQk7NtgA'
 };
 
-// === NEW: Build expected 8world stream titles for today (SGT) & resolve live Video ID from RSS ===
+// === NEW: Build expected 8world stream titles for today (SGT) & resolve all candidate streams from RSS ===
 function get8worldExpectedTitles() {
   const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Singapore' }));
   const yyyy = now.getFullYear();
@@ -211,33 +230,42 @@ function get8worldExpectedTitles() {
   const eveningShow = isWeekend ? `《狮城6点半》${dateStr}` : `《狮城有约》${dateStr}`;
   const nightShow = `《晚间新闻》${dateStr}`;
   const hour = now.getHours() + now.getMinutes() / 60;
-  // Prioritize 10pm show after 20:30 SGT, otherwise 6:30pm show
   return hour >= 20.5 ? [nightShow, eveningShow] : [eveningShow, nightShow];
 }
 
-async function resolveChannelLiveVideoId(channelId, is8world) {
+async function fetchChannelStreams(channelId, is8world) {
   try {
     const rssUrl = `https://www.youtube.com/feeds/videos.xml?channel_id=${channelId}`;
     const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(rssUrl)}`;
     const res = await fetch(proxyUrl);
     const data = await res.json();
-    if (!data || !data.contents) return null;
+    if (!data || !data.contents) return [];
     const xml = new DOMParser().parseFromString(data.contents, 'text/xml');
-    const entries = [...xml.querySelectorAll('entry')];
-    if (!entries.length) return null;
+    const entries = [...xml.querySelectorAll('entry')].map(e => ({
+      vid: e.querySelector('videoId')?.textContent || '',
+      title: e.querySelector('title')?.textContent || ''
+    })).filter(x => x.vid);
 
     if (is8world) {
       const targets = get8worldExpectedTitles();
-      for (const target of targets) {
-        const match = entries.find(e => (e.querySelector('title')?.textContent || '').includes(target));
-        if (match) return match.querySelector('videoId')?.textContent || null;
+      const prioritized = [];
+      for (const t of targets) {
+        const found = entries.find(e => e.title.includes(t));
+        if (found && !prioritized.some(p => p.vid === found.vid)) prioritized.push(found);
       }
+      for (const e of entries) {
+        if (e.title.includes('【直播】') && !prioritized.some(p => p.vid === e.vid)) prioritized.push(e);
+      }
+      return prioritized.length ? prioritized : entries.slice(0, 6);
     }
-    // Fallback: check for any entry with 【直播】 in the title
-    const liveEntry = entries.find(e => (e.querySelector('title')?.textContent || '').includes('【直播】'));
-    return liveEntry ? liveEntry.querySelector('videoId')?.textContent : null;
+
+    // For multi-stream channels (Reuters, AP, NBC, CBS, etc.), prioritize LIVE / 【直播】 entries first, then recent entries
+    const liveRe = /\bLIVE\b|【直播】|直播|Stream/i;
+    const live = entries.filter(e => liveRe.test(e.title));
+    const rest = entries.filter(e => !liveRe.test(e.title));
+    return [...live, ...rest].slice(0, 8);
   } catch (e) {
-    return null;
+    return [];
   }
 }
 // === END NEW ===
@@ -247,6 +275,12 @@ let S={custom:[],favs:[],removed:[],last:'cna',q:'1080',order:[]};
 try{const r=localStorage.getItem(KEY);if(r)S=Object.assign(S,JSON.parse(r))}catch(e){}
 const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}};
 let cat='All',term='',cur=null,first=true,edit=false;
+// === NEW: Multiview & per-channel stream cache state ===
+let mvMode = false;
+let mvSlots = []; // Array of { chId, vidOverride, mute }
+let mvActiveIdx = 0;
+const streamCache = {}; // channelId -> [{ vid, title }]
+// === END NEW ===
 const $=id=>document.getElementById(id);
 const all=()=>{const o=S.order||[],ix=c=>{const i=o.indexOf(c.id);return i<0?1e6:i};return D.concat(S.custom).filter(c=>!S.removed.includes(c.id)).sort((a,b)=>ix(a)-ix(b))};
 
@@ -272,48 +306,228 @@ function renderChips(){const cats=['All','Favourites',...new Set(all().map(c=>c.
  $('chips').innerHTML=cats.map(c=>`<button class="chip" aria-pressed="${c===cat}" data-c="${esc(c)}">${esc(c)}</button>`).join('');
  $('cats').innerHTML=[...new Set(all().map(c=>c.cat))].map(c=>`<option value="${esc(c)}">`).join('')}
 function renderList(){const a=all(),v=visible();
- $('list').innerHTML=v.length?v.map(c=>`<button class="ch ${cur&&cur.id===c.id?'on':''}" data-id="${c.id}"><span class="n">${a.indexOf(c)+1}</span>${tile(c.name)}<span class="t"><b>${esc(c.name)}</b><small>${esc(c.cat)}</small></span>${edit?'<span class="mv"><span data-m="top" role="button" aria-label="Move to top" title="Move to top">⤒</span><span data-m="-1" role="button" aria-label="Move up">▲</span><span data-m="1" role="button" aria-label="Move down">▼</span></span>':`<span class="heart ${S.favs.includes(c.id)?'f':''}" data-h="${c.id}" role="button" aria-label="Favourite">${S.favs.includes(c.id)?'♥':'♡'}</span>`}</button>`).join(''):'<div class="empty">No channels here yet. Use “+ Add” to paste a livestream link.</div>'}
+ // === NEW: Highlight all active channels when in Multiview mode ===
+ const activeIds = mvMode ? mvSlots.map(s => s.chId) : (cur ? [cur.id] : []);
+ $('list').innerHTML=v.length?v.map(c=>`<button class="ch ${activeIds.includes(c.id)?'on':''}" data-id="${c.id}"><span class="n">${a.indexOf(c)+1}</span>${tile(c.name)}<span class="t"><b>${esc(c.name)}</b><small>${esc(c.cat)}</small></span>${edit?'<span class="mv"><span data-m="top" role="button" aria-label="Move to top" title="Move to top">⤒</span><span data-m="-1" role="button" aria-label="Move up">▲</span><span data-m="1" role="button" aria-label="Move down">▼</span></span>':`<span class="heart ${S.favs.includes(c.id)?'f':''}" data-h="${c.id}" role="button" aria-label="Favourite">${S.favs.includes(c.id)?'♥':'♡'}</span>`}</button>`).join(''):'<div class="empty">No channels here yet. Use “+ Add” to paste a livestream link.</div>'}
+ // === END NEW ===
 
-// === NEW: Helper to build the YouTube iframe HTML ===
-function buildYtIframe(cur, videoOrChParam, user) {
+// === NEW: Helper to build YouTube iframe & description-bar stream switcher ===
+function buildYtIframe(ch, videoOrChParam, mute) {
   const vq = {1080:'hd1080',720:'hd720',480:'large'}[S.q];
-  return `<iframe title="${esc(cur.name)}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen src="https://www.youtube.com/embed/${videoOrChParam}autoplay=1&rel=0&playsinline=1${vq?'&vq='+vq+'&hd=1':''}${first&&!user?'&mute=1':''}"></iframe>`;
+  return `<iframe title="${esc(ch.name)}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen src="https://www.youtube.com/embed/${videoOrChParam}autoplay=1&rel=0&playsinline=1${vq?'&vq='+vq+'&hd=1':''}${mute?'&mute=1':''}"></iframe>`;
 }
+
+function buildExtCard(ch) {
+  const host = esc(new URL(ch.url).hostname.replace('www.',''));
+  return `<div class="ext"><h2>${esc(ch.name)}</h2><p>${esc(ch.desc)} This broadcaster doesn’t allow its stream to be embedded, so it plays on its own site.</p><div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center"><a class="go" href="${esc(ch.url)}" target="_blank" rel="noopener">Watch on ${host} ↗</a><button class="icon-btn" onclick="window.open('${esc(ch.url)}','tvbox_ext','width=1100,height=680')">Popout Window ⧉</button></div></div>`;
+}
+
+function renderDescStreamControls(ch, selectedVid) {
+  const bar = $('istream');
+  const y = ytId(ch.url);
+  if (!y || !y.startsWith('ch:')) {
+    bar.innerHTML = '';
+    return;
+  }
+  const chId = y.slice(3);
+  const is8world = (chId === 'UCUqUtr0w-K8W4AfpbHiYSaQ');
+  const streamsPage = is8world ? 'https://www.youtube.com/@8worldSG/streams' : `https://www.youtube.com/channel/${chId}/streams`;
+  const list = streamCache[chId] || [];
+
+  let selectHtml = '';
+  if (list.length) {
+    selectHtml = `<select id="stream-sel" aria-label="Switch livestream" title="Switch active stream on this channel">
+      <option value="">Default Channel Live</option>
+      ${list.map((s, idx) => `<option value="${esc(s.vid)}" ${selectedVid === s.vid ? 'selected' : ''}>Stream ${idx + 1}: ${esc(s.title.slice(0, 42))}${s.title.length > 42 ? '…' : ''}</option>`).join('')}
+    </select>`;
+  }
+
+  bar.innerHTML = `
+    <button class="pill-btn" id="find-vid" title="Fetch latest & concurrent live streams">${list.length ? '↻ Refresh Streams' : 'Find Latest Stream'}</button>
+    ${selectHtml}
+    <a class="pill-btn" href="${streamsPage}" target="_blank" rel="noopener">All Streams ↗</a>
+  `;
+
+  $('find-vid').onclick = async () => {
+    $('find-vid').textContent = 'Searching…';
+    const streams = await fetchChannelStreams(chId, is8world);
+    streamCache[chId] = streams;
+    const bestVid = streams[0]?.vid || '';
+    if (mvMode && mvSlots[mvActiveIdx]) {
+      mvSlots[mvActiveIdx].vidOverride = bestVid;
+      renderMultiview(true);
+    } else if (cur && cur.id === ch.id) {
+      $('video').innerHTML = buildYtIframe(ch, bestVid ? `${bestVid}?` : `live_stream?channel=${chId}&`, false);
+    }
+    renderDescStreamControls(ch, bestVid);
+  };
+
+  const sel = $('stream-sel');
+  if (sel) {
+    sel.onchange = (e) => {
+      const vid = e.target.value;
+      if (mvMode && mvSlots[mvActiveIdx]) {
+        mvSlots[mvActiveIdx].vidOverride = vid;
+        renderMultiview(true);
+      } else {
+        $('video').innerHTML = buildYtIframe(ch, vid ? `${vid}?` : `live_stream?channel=${chId}&`, false);
+      }
+    };
+  }
+}
+
+function syncInfoBar(ch, selectedVid) {
+  const a = all();
+  cur = ch;
+  $('inum').textContent = a.indexOf(ch) + 1;
+  $('iname').textContent = ch.name;
+  $('idesc').textContent = ch.cat + ' · ' + ch.desc;
+  $('open').href = ch.url;
+  $('fav').textContent = S.favs.includes(ch.id) ? '♥' : '♡';
+  $('qual').disabled = !ytId(ch.url);
+  renderDescStreamControls(ch, selectedVid || '');
+}
+
+function renderMultiview(user) {
+  const a = all();
+  const v = $('video');
+  v.className = `video mv-grid mv-${mvSlots.length}`;
+  v.innerHTML = mvSlots.map((slot, idx) => {
+    const ch = a.find(c => c.id === slot.chId) || a[0];
+    if (!ch) return '';
+    const y = ytId(ch.url);
+    let mediaHtml = '';
+    if (y) {
+      const param = y.startsWith('ch:')
+        ? (slot.vidOverride ? `${slot.vidOverride}?` : `live_stream?channel=${y.slice(3)}&`)
+        : `${y}?`;
+      mediaHtml = buildYtIframe(ch, param, idx !== mvActiveIdx || (first && !user));
+    } else {
+      mediaHtml = buildExtCard(ch);
+    }
+    return `<div class="mv-pane ${idx === mvActiveIdx ? 'active' : ''}" data-slot="${idx}">
+      <div class="mv-tag" data-focus="${idx}" title="Click to focus this stream">
+        <span>${idx + 1}. ${esc(ch.name)}</span>
+        ${mvSlots.length > 1 ? `<button data-close="${idx}" title="Close tile">✕</button>` : ''}
+      </div>
+      ${mediaHtml}
+    </div>`;
+  }).join('');
+
+  v.querySelectorAll('[data-focus]').forEach(el => {
+    el.onclick = (e) => {
+      if (e.target.closest('[data-close]')) return;
+      mvActiveIdx = Number(el.dataset.focus);
+      const activeSlot = mvSlots[mvActiveIdx];
+      const activeCh = a.find(c => c.id === activeSlot.chId);
+      if (activeCh) syncInfoBar(activeCh, activeSlot.vidOverride);
+      v.querySelectorAll('.mv-pane').forEach((p, i) => p.classList.toggle('active', i === mvActiveIdx));
+    };
+  });
+
+  v.querySelectorAll('[data-close]').forEach(btn => {
+    btn.onclick = (e) => {
+      e.stopPropagation();
+      const idx = Number(btn.dataset.close);
+      mvSlots.splice(idx, 1);
+      if (mvActiveIdx >= mvSlots.length) mvActiveIdx = Math.max(0, mvSlots.length - 1);
+      if (mvSlots.length <= 1) {
+        toggleMultiview(false);
+      } else {
+        renderMultiview(true);
+        const activeCh = a.find(c => c.id === mvSlots[mvActiveIdx].chId);
+        if (activeCh) syncInfoBar(activeCh, mvSlots[mvActiveIdx].vidOverride);
+        renderList();
+      }
+    };
+  });
+
+  const activeSlot = mvSlots[mvActiveIdx];
+  const activeCh = a.find(c => c.id === activeSlot?.chId);
+  if (activeCh) syncInfoBar(activeCh, activeSlot.vidOverride);
+  renderList();
+  hud();
+}
+
+function toggleMultiview(force) {
+  mvMode = typeof force === 'boolean' ? force : !mvMode;
+  $('mvb').classList.toggle('active', mvMode);
+  $('mvb').textContent = mvMode ? 'Exit Split' : 'Multiview';
+  const a = all();
+  if (mvMode) {
+    const firstCh = cur || a[0];
+    const secondCh = a.find(c => c.id !== firstCh.id && c.cat === 'News') || a.find(c => c.id !== firstCh.id) || firstCh;
+    mvSlots = [
+      { chId: firstCh.id, vidOverride: '' },
+      { chId: secondCh.id, vidOverride: '' }
+    ];
+    mvActiveIdx = 0;
+    renderMultiview(true);
+  } else {
+    const keepId = mvSlots[mvActiveIdx]?.chId || (cur && cur.id) || (a[0] && a[0].id);
+    mvSlots = [];
+    $('video').className = 'video';
+    play(keepId, true);
+  }
+}
+$('mvb').onclick = () => toggleMultiview();
 // === END NEW ===
 
 function play(id,user){const a=all();cur=a.find(c=>c.id===id)||a[0];if(!cur){$('video').innerHTML='<div class="ext"><p>No channels left. Add one to start watching.</p></div>';return}
  S.last=cur.id;save();
- $('inum').textContent=a.indexOf(cur)+1;$('iname').textContent=cur.name;$('idesc').textContent=cur.cat+' · '+cur.desc;
- $('open').href=cur.url;$('fav').textContent=S.favs.includes(cur.id)?'♥':'♡';
+
+ // === NEW: In Multiview mode, load clicked channel into active tile (or add up to 4 tiles) ===
+ if (mvMode) {
+   const existingIdx = mvSlots.findIndex(s => s.chId === cur.id);
+   if (existingIdx >= 0) {
+     mvActiveIdx = existingIdx;
+   } else if (mvSlots.length < 4 && mvSlots[mvActiveIdx]?.chId) {
+     // Fill up to 4 tiles automatically if user picks new channels, or replace active slot once 4 are full
+     if (mvSlots.length < 3) {
+       mvSlots.push({ chId: cur.id, vidOverride: '' });
+       mvActiveIdx = mvSlots.length - 1;
+     } else {
+       mvSlots[mvActiveIdx] = { chId: cur.id, vidOverride: '' };
+     }
+   } else {
+     mvSlots[mvActiveIdx] = { chId: cur.id, vidOverride: '' };
+   }
+   renderMultiview(user);
+   return;
+ }
+ // === END NEW ===
+
  const y=ytId(cur.url),v=$('video');
- $('qual').disabled=!y;
+ v.className='video';
+ syncInfoBar(cur, '');
  if(y){
-  // === NEW: For channel-based streams (like 8world), try resolving today's scheduled stream Video ID first ===
+  // === NEW: Resolve channel streams (8world, Reuters, AP, etc.) & update description controls ===
   if (y.startsWith('ch:')) {
     const chId = y.slice(3);
     const is8world = (chId === 'UCUqUtr0w-K8W4AfpbHiYSaQ');
-    const streamsPage = is8world ? 'https://www.youtube.com/@8worldSG/streams' : `https://www.youtube.com/channel/${chId}/streams`;
-    v.innerHTML = buildYtIframe(cur, `live_stream?channel=${chId}&`, user) +
-      `<div class="stream-bar" id="sbar"><span>${is8world ? '8world Live (6:30pm / 10pm SGT)' : 'Channel Live'}</span><button id="find-vid">Find Latest Stream</button><a href="${streamsPage}" target="_blank" rel="noopener">All Streams ↗</a></div>`;
+    const cached = streamCache[chId];
+    const initialVid = cached?.[0]?.vid || '';
+    v.innerHTML = buildYtIframe(cur, initialVid ? `${initialVid}?` : `live_stream?channel=${chId}&`, first && !user);
+    renderDescStreamControls(cur, initialVid);
 
-    const tryResolve = async () => {
-      const bar = $('sbar');
-      if (bar) bar.querySelector('span').textContent = 'Searching today’s broadcast…';
-      const vid = await resolveChannelLiveVideoId(chId, is8world);
-      if (vid && cur && ytId(cur.url) === y) {
-        v.innerHTML = buildYtIframe(cur, `${vid}?`, user);
-      } else if (bar) {
-        bar.querySelector('span').textContent = is8world ? 'No active 6:30pm / 10pm stream found right now' : 'No active stream found';
-      }
-    };
-    $('find-vid').onclick = tryResolve;
-    if (is8world) tryResolve();
+    if (!cached) {
+      fetchChannelStreams(chId, is8world).then(streams => {
+        streamCache[chId] = streams;
+        if (cur && ytId(cur.url) === y) {
+          const bestVid = (is8world && streams[0]) ? streams[0].vid : '';
+          if (bestVid) {
+            v.innerHTML = buildYtIframe(cur, `${bestVid}?`, false);
+          }
+          renderDescStreamControls(cur, bestVid);
+        }
+      });
+    }
   } else {
-    v.innerHTML = buildYtIframe(cur, `${y}?`, user);
+    v.innerHTML = buildYtIframe(cur, `${y}?`, first && !user);
   }
   // === END NEW ===
  }
- else v.innerHTML=`<div class="ext"><h2>${esc(cur.name)}</h2><p>${esc(cur.desc)} This broadcaster doesn’t allow its stream to be embedded, so it plays on its own site.</p><a class="go" href="${esc(cur.url)}" target="_blank" rel="noopener">Watch on ${esc(new URL(cur.url).hostname.replace('www.',''))}</a></div>`;
+ else v.innerHTML = buildExtCard(cur);
  first=false;renderList();hud()}
 
 function zap(d){const v=visible();if(!v.length)return;const i=v.findIndex(c=>c.id===(cur&&cur.id));play(v[(i+d+v.length)%v.length].id,true);
@@ -325,8 +539,8 @@ $('list').onclick=e=>{const mv=e.target.closest('[data-m]');if(mv){e.stopPropaga
  const h=e.target.closest('[data-h]');
  if(h){e.stopPropagation();const id=h.dataset.h,i=S.favs.indexOf(id);i<0?S.favs.push(id):S.favs.splice(i,1);save();$('fav').textContent=cur&&S.favs.includes(cur.id)?'♥':'♡';renderList();return}
  const b=e.target.closest('.ch');if(b)play(b.dataset.id,true)};
-$('rl').onclick=()=>{if(cur)play(cur.id,true)};
-$('qual').onchange=e=>{S.q=e.target.value;save();play(cur.id,true)};
+$('rl').onclick=()=>{if(mvMode)renderMultiview(true);else if(cur)play(cur.id,true)};
+$('qual').onchange=e=>{S.q=e.target.value;save();if(mvMode)renderMultiview(true);else play(cur.id,true)};
 $('fav').onclick=()=>{if(!cur)return;const i=S.favs.indexOf(cur.id);i<0?S.favs.push(cur.id):S.favs.splice(i,1);save();$('fav').textContent=S.favs.includes(cur.id)?'♥':'♡';renderList()};
 $('del').onclick=()=>{if(!cur||!confirm('Remove “'+cur.name+'” from your list?'))return;const c=cur;
  if(S.custom.some(x=>x.id===c.id))S.custom=S.custom.filter(x=>x.id!==c.id);else S.removed.push(c.id);
@@ -341,12 +555,10 @@ $('modal').onclick=e=>{if(e.target===$('modal'))closeM()};
 $('f-url').onblur=()=>{if(!$('f-name').value){try{const h=new URL($('f-url').value).hostname.replace('www.','');if(!ytId($('f-url').value))$('f-name').value=h.split('.')[0]}catch(e){}}};
 $('save').onclick=()=>{const raw=$('f-url').value.trim();if(/<video/i.test(raw)){$('err').textContent='That video code only works inside your own tab. Paste the channel page link instead.';return}
  const m=raw.match(/src="([^"]+)"/),url=/^UC[\w-]{22}$/.test(raw)?'https://www.youtube.com/channel/'+raw:m?m[1]:raw,name=$('f-name').value.trim();
- // === NEW: Allow @handle URLs if they are in YT_HANDLES (like @8worldSG) ===
  const handleCheck = url.match(/youtube\.com\/@([\w.-]+)/i);
  if (handleCheck && YT_HANDLES[handleCheck[1].toLowerCase()]) {
-   // Known handle — let it pass!
+   // Known handle — let it pass
  } else if(/youtube\.com\/(@|c\/|user\/)/.test(url)){$('err').textContent='That is a channel name link. Open the channel’s About tab, copy its channel ID (starts with UC) and paste that instead.';return}
- // === END NEW ===
  try{const u=new URL(url);if(!/^https?:$/.test(u.protocol))throw 0}catch(e){$('err').textContent='Paste a full link starting with https://';return}
  if(!name){$('err').textContent='Give the channel a name.';return}
  const c={id:'u'+Date.now(),name,cat:$('f-cat').value.trim()||'Other',url,desc:$('f-desc').value.trim()||'Added by me.'};
