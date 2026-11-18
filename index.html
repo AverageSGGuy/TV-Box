@@ -167,6 +167,7 @@ const D=[
 ['bdk','八度空间','新聞','https://www.youtube.com/channel/UCJZTvwnKU0PBH4dhDJkFyZw','早上9点半、下午12点半、下午8点.'],
 ['reu','Reuters','News','https://www.youtube.com/channel/UChqUTb7kYRX8-EiaN3XFrSQ','Live global breaking news and raw feeds from Reuters.'],
 ['apn','AP News','News','https://www.youtube.com/channel/UC52X5wxOL_s5yw0dQk7NtgA','Live global coverage and press briefings from Associated Press.'],
+['kbsn','KBS News','News','https://www.youtube.com/channel/UCcQTRi69dsVYHN3exePtZ1A','24/7 Korean breaking news and live coverage from KBS News.'],
 ['tvbs','TVBS 新聞','新聞','https://www.youtube.com/live/2mCSYvcfhtc?si=kpjj3BkdZRjWmJ2V','TVBS新聞'],
 ['ttv','台視新聞','新聞','https://www.youtube.com/channel/UC8ROUUjHzEQm-ndb69CX8Ww','台視新聞'],
 ['san','三立新聞','新聞','https://www.youtube.com/live/hGJkDZDchYI?si=QOSAFTOCSUlAyi0A','三立新聞'],
@@ -209,7 +210,8 @@ const D=[
 const YT_HANDLES = {
   '8worldsg': 'UCUqUtr0w-K8W4AfpbHiYSaQ',
   'reuters': 'UChqUTb7kYRX8-EiaN3XFrSQ',
-  'associatedpress': 'UC52X5wxOL_s5yw0dQk7NtgA'
+  'associatedpress': 'UC52X5wxOL_s5yw0dQk7NtgA',
+  'kbsnews': 'UCcQTRi69dsVYHN3exePtZ1A'
 };
 
 const KEY='myChannels.v1';
@@ -220,6 +222,49 @@ let cat='All',term='',cur=null,first=true,edit=false;
 let mvMode = false;
 let mvSlots = [];
 let mvActiveIdx = 0;
+
+// YouTube IFrame Player API registry so Stream 1-8 buttons jump playlist indices via playVideoAt()
+const ytPlayers = {};
+let ytApiReady = false;
+const pendingPlayerInits = [];
+window.onYouTubeIframeAPIReady = () => {
+  ytApiReady = true;
+  while (pendingPlayerInits.length) pendingPlayerInits.shift()();
+};
+(function loadYtApi() {
+  const tag = document.createElement('script');
+  tag.src = 'https://www.youtube.com/iframe_api';
+  document.head.appendChild(tag);
+})();
+
+function mountPlaylistPlayer(domId, listId, listIndex, mute) {
+  const init = () => {
+    if (ytPlayers[domId] && ytPlayers[domId].destroy) {
+      try { ytPlayers[domId].destroy(); } catch (e) {}
+    }
+    ytPlayers[domId] = new YT.Player(domId, {
+      playerVars: {
+        listType: 'playlist',
+        list: listId,
+        index: listIndex,
+        autoplay: 1,
+        rel: 0,
+        playsinline: 1,
+        mute: mute ? 1 : 0
+      },
+      events: {
+        onReady: (ev) => {
+          if (mute) ev.target.mute();
+          if (listIndex > 0) ev.target.playVideoAt(listIndex);
+          else ev.target.playVideo();
+        }
+      }
+    });
+  };
+  if (ytApiReady && window.YT && YT.Player) init();
+  else pendingPlayerInits.push(init);
+}
+
 const $=id=>document.getElementById(id);
 const all=()=>{const o=S.order||[],ix=c=>{const i=o.indexOf(c.id);return i<0?1e6:i};return D.concat(S.custom).filter(c=>!S.removed.includes(c.id)).sort((a,b)=>ix(a)-ix(b))};
 
@@ -247,12 +292,10 @@ function renderList(){const a=all(),v=visible();
  const activeIds = mvMode ? mvSlots.map(s => s.chId) : (cur ? [cur.id] : []);
  $('list').innerHTML=v.length?v.map(c=>`<button class="ch ${activeIds.includes(c.id)?'on':''}" data-id="${c.id}"><span class="n">${a.indexOf(c)+1}</span>${tile(c.name)}<span class="t"><b>${esc(c.name)}</b><small>${esc(c.cat)}</small></span>${edit?'<span class="mv"><span data-m="top" role="button" aria-label="Move to top" title="Move to top">⤒</span><span data-m="-1" role="button" aria-label="Move up">▲</span><span data-m="1" role="button" aria-label="Move down">▼</span></span>':`<span class="heart ${S.favs.includes(c.id)?'f':''}" data-h="${c.id}" role="button" aria-label="Favourite">${S.favs.includes(c.id)?'♥':'♡'}</span>`}</button>`).join(''):'<div class="empty">No channels here yet. Use “+ Add” to paste a livestream link.</div>'}
 
-function buildYtIframe(ch, videoOrChParam, mute, listIndex = 0) {
+function buildYtIframe(ch, videoOrChParam, mute, domId = 'yt-main-player') {
   const vq = {1080:'hd1080',720:'hd720',480:'large'}[S.q];
   if (videoOrChParam.startsWith('live_stream?channel=')) {
-    const chId = videoOrChParam.split('=')[1].split('&')[0];
-    const liveListId = 'UULV' + chId.slice(2);
-    return `<iframe title="${esc(ch.name)}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen src="https://www.youtube.com/embed/videoseries?list=${liveListId}&index=${listIndex}&autoplay=1&rel=0&playsinline=1${vq?'&vq='+vq+'&hd=1':''}${mute?'&mute=1':''}"></iframe>`;
+    return `<div id="${domId}" style="position:absolute;inset:0;width:100%;height:100%"></div>`;
   }
   return `<iframe title="${esc(ch.name)}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen src="https://www.youtube.com/embed/${videoOrChParam}autoplay=1&rel=0&playsinline=1${vq?'&vq='+vq+'&hd=1':''}${mute?'&mute=1':''}"></iframe>`;
 }
@@ -270,10 +313,12 @@ function renderDescStreamControls(ch, selectedVid, activeIndex = 0) {
     return;
   }
   const chId = y.slice(3);
+  const liveListId = 'UULV' + chId.slice(2);
   const is8world = (chId === 'UCUqUtr0w-K8W4AfpbHiYSaQ');
   const streamsPage = is8world ? 'https://www.youtube.com/@8worldSG/streams' : `https://www.youtube.com/channel/${chId}/streams`;
 
-  const pills = [0, 1, 2, 3].map(idx => {
+  // 8 Stream pills powered by YT.Player.playVideoAt(index)
+  const pills = [0, 1, 2, 3, 4, 5, 6, 7].map(idx => {
     const isSelected = !selectedVid && activeIndex === idx;
     return `<button class="pill-btn ${isSelected ? 'active' : ''}" data-sidx="${idx}">Stream ${idx + 1}</button>`;
   }).join('');
@@ -288,11 +333,22 @@ function renderDescStreamControls(ch, selectedVid, activeIndex = 0) {
     btn.onclick = () => {
       const idx = Number(btn.dataset.sidx);
       if (mvMode && mvSlots[mvActiveIdx]) {
+        const slotDomId = `yt-mv-${mvActiveIdx}`;
         mvSlots[mvActiveIdx].vidOverride = '';
         mvSlots[mvActiveIdx].listIdx = idx;
-        renderMultiview(true);
+        if (ytPlayers[slotDomId] && ytPlayers[slotDomId].playVideoAt) {
+          ytPlayers[slotDomId].playVideoAt(idx);
+          renderDescStreamControls(ch, '', idx);
+        } else {
+          renderMultiview(true);
+        }
       } else if (cur && cur.id === ch.id) {
-        $('video').innerHTML = buildYtIframe(ch, `live_stream?channel=${chId}&`, false, idx);
+        if (ytPlayers['yt-main-player'] && ytPlayers['yt-main-player'].playVideoAt) {
+          ytPlayers['yt-main-player'].playVideoAt(idx);
+        } else {
+          $('video').innerHTML = buildYtIframe(ch, `live_stream?channel=${chId}&`, false, 'yt-main-player');
+          mountPlaylistPlayer('yt-main-player', liveListId, idx, false);
+        }
         renderDescStreamControls(ch, '', idx);
       }
     };
@@ -310,6 +366,7 @@ function renderDescStreamControls(ch, selectedVid, activeIndex = 0) {
       mvSlots[mvActiveIdx].vidOverride = parsed;
       renderMultiview(true);
     } else if (cur && cur.id === ch.id) {
+      delete ytPlayers['yt-main-player'];
       $('video').innerHTML = buildYtIframe(ch, `${parsed}?`, false);
       renderDescStreamControls(ch, parsed, -1);
     }
@@ -332,16 +389,24 @@ function renderMultiview(user) {
   const a = all();
   const v = $('video');
   v.className = `video mv-grid ${mvSlots.length > 4 ? 'mv-many' : ''}`;
+  const playlistMounts = [];
+
   v.innerHTML = mvSlots.map((slot, idx) => {
     const ch = a.find(c => c.id === slot.chId) || a[0];
     if (!ch) return '';
     const y = ytId(ch.url);
+    const mute = idx !== mvActiveIdx || (first && !user);
     let mediaHtml = '';
     if (y) {
-      const param = y.startsWith('ch:')
-        ? (slot.vidOverride ? `${slot.vidOverride}?` : `live_stream?channel=${y.slice(3)}&`)
-        : `${y}?`;
-      mediaHtml = buildYtIframe(ch, param, idx !== mvActiveIdx || (first && !user), slot.listIdx || 0);
+      if (y.startsWith('ch:') && !slot.vidOverride) {
+        const chId = y.slice(3);
+        const domId = `yt-mv-${idx}`;
+        mediaHtml = buildYtIframe(ch, `live_stream?channel=${chId}&`, mute, domId);
+        playlistMounts.push({ domId, listId: 'UULV' + chId.slice(2), listIdx: slot.listIdx || 0, mute });
+      } else {
+        const param = slot.vidOverride ? `${slot.vidOverride}?` : `${y}?`;
+        mediaHtml = buildYtIframe(ch, param, mute);
+      }
     } else {
       mediaHtml = buildExtCard(ch);
     }
@@ -353,6 +418,8 @@ function renderMultiview(user) {
       ${mediaHtml}
     </div>`;
   }).join('');
+
+  playlistMounts.forEach(m => mountPlaylistPlayer(m.domId, m.listId, m.listIdx, m.mute));
 
   v.querySelectorAll('[data-focus]').forEach(el => {
     el.onclick = (e) => {
@@ -438,9 +505,12 @@ function play(id,user){const a=all();cur=a.find(c=>c.id===id)||a[0];if(!cur){$('
  if(y){
   if (y.startsWith('ch:')) {
     const chId = y.slice(3);
-    v.innerHTML = buildYtIframe(cur, `live_stream?channel=${chId}&`, first && !user, 0);
+    const mute = first && !user;
+    v.innerHTML = buildYtIframe(cur, `live_stream?channel=${chId}&`, mute, 'yt-main-player');
+    mountPlaylistPlayer('yt-main-player', 'UULV' + chId.slice(2), 0, mute);
   } else {
-    v.innerHTML = buildYtIframe(cur, `${y}?`, first && !user, 0);
+    delete ytPlayers['yt-main-player'];
+    v.innerHTML = buildYtIframe(cur, `${y}?`, first && !user);
   }
  }
  else v.innerHTML = buildExtCard(cur);
