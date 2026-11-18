@@ -101,6 +101,12 @@ body::before{display:none}
 .rail-top h1{display:flex;align-items:center;gap:9px}.rail-top h1 svg{flex:none;filter:drop-shadow(0 2px 6px rgba(0,0,0,.35))}
 .dial{position:fixed;z-index:6;top:22px;left:22px;min-width:84px;text-align:center;padding:8px 22px;border-radius:22px;font:600 56px/1 var(--num);letter-spacing:.04em;background:rgba(255,255,255,.14);-webkit-backdrop-filter:blur(26px) saturate(180%);backdrop-filter:blur(26px) saturate(180%);border:1px solid rgba(255,255,255,.3);box-shadow:inset 0 1px 0 rgba(255,255,255,.4),0 12px 40px rgba(0,0,0,.35);opacity:0;transform:scale(.96);transition:opacity .15s,transform .15s;pointer-events:none}
 .dial.on{opacity:1;transform:none}.dial small{display:block;font:500 14px var(--font);letter-spacing:0;color:#cfd6e4;margin-top:4px}
+
+/* === NEW: Subtle helper banner for scheduled streams (like 8world) === */
+.stream-bar{position:absolute;top:12px;left:14px;z-index:4;display:flex;gap:8px;align-items:center;background:rgba(18,21,27,.82);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,.22);border-radius:99px;padding:6px 14px;font-size:13px;color:var(--text)}
+.stream-bar a,.stream-bar button{background:rgba(255,255,255,.14);border:0;border-radius:99px;padding:3px 10px;font-size:12px;color:#fff;text-decoration:none;cursor:pointer}
+.stream-bar a:hover,.stream-bar button:hover{background:var(--accent);color:#06121f}
+/* === END NEW === */
 </style>
 </head>
 <body>
@@ -132,7 +138,7 @@ body::before{display:none}
 <div class="dial" id="dial" role="status" aria-live="polite"></div>
 <div class="modal" id="modal"><div class="card" role="dialog" aria-labelledby="mt">
  <h3 id="mt">Add a channel</h3>
- <label>Livestream link<input type="url" id="f-url" placeholder="YouTube link, channel ID or embed code"></label>
+ <label>Livestream link<input type="url" id="f-url" placeholder="YouTube link, @handle, channel ID or embed code"></label>
  <label>Channel name<input type="text" id="f-name" maxlength="40"></label>
  <label>Category<input type="text" id="f-cat" list="cats" maxlength="24" placeholder="News, 新聞, Music, Kids, 臺灣"></label>
  <datalist id="cats"></datalist>
@@ -188,6 +194,54 @@ const D=[
 ['snm','Snoopy Music','Music','https://www.youtube.com/watch?v=XPIS0XA5lpk','Cosy Snoopy-themed music.']
 ].map(a=>({id:a[0],name:a[1],cat:a[2],url:a[3],desc:a[4]}));
 
+// === NEW: Map YouTube @handles to their UC Channel IDs ===
+const YT_HANDLES = {
+  '8worldsg': 'UCUqUtr0w-K8W4AfpbHiYSaQ'
+};
+
+// === NEW: Build expected 8world stream titles for today (SGT) & resolve live Video ID from RSS ===
+function get8worldExpectedTitles() {
+  const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Singapore' }));
+  const yyyy = now.getFullYear();
+  const mm = String(now.getMonth() + 1).padStart(2, '0');
+  const dd = String(now.getDate()).padStart(2, '0');
+  const dateStr = `（${yyyy}年${mm}月${dd}日）`;
+  const day = now.getDay(); // 0 = Sun, 6 = Sat
+  const isWeekend = (day === 0 || day === 6);
+  const eveningShow = isWeekend ? `《狮城6点半》${dateStr}` : `《狮城有约》${dateStr}`;
+  const nightShow = `《晚间新闻》${dateStr}`;
+  const hour = now.getHours() + now.getMinutes() / 60;
+  // Prioritize 10pm show after 20:30 SGT, otherwise 6:30pm show
+  return hour >= 20.5 ? [nightShow, eveningShow] : [eveningShow, nightShow];
+}
+
+async function resolveChannelLiveVideoId(channelId, is8world) {
+  try {
+    const rssUrl = `https://www.youtube.com/feeds/videos.xml?channel_id=${channelId}`;
+    const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(rssUrl)}`;
+    const res = await fetch(proxyUrl);
+    const data = await res.json();
+    if (!data || !data.contents) return null;
+    const xml = new DOMParser().parseFromString(data.contents, 'text/xml');
+    const entries = [...xml.querySelectorAll('entry')];
+    if (!entries.length) return null;
+
+    if (is8world) {
+      const targets = get8worldExpectedTitles();
+      for (const target of targets) {
+        const match = entries.find(e => (e.querySelector('title')?.textContent || '').includes(target));
+        if (match) return match.querySelector('videoId')?.textContent || null;
+      }
+    }
+    // Fallback: check for any entry with 【直播】 in the title
+    const liveEntry = entries.find(e => (e.querySelector('title')?.textContent || '').includes('【直播】'));
+    return liveEntry ? liveEntry.querySelector('videoId')?.textContent : null;
+  } catch (e) {
+    return null;
+  }
+}
+// === END NEW ===
+
 const KEY='myChannels.v1';
 let S={custom:[],favs:[],removed:[],last:'cna',q:'1080',order:[]};
 try{const r=localStorage.getItem(KEY);if(r)S=Object.assign(S,JSON.parse(r))}catch(e){}
@@ -199,7 +253,15 @@ const all=()=>{const o=S.order||[],ix=c=>{const i=o.indexOf(c.id);return i<0?1e6
 function ytId(u){try{const x=new URL(u),h=x.hostname.replace('www.','');
  if(h==='youtu.be')return x.pathname.slice(1)||null;
  if(h.endsWith('youtube.com')){if(x.searchParams.get('v'))return x.searchParams.get('v');
-  if(x.searchParams.get('channel'))return 'ch:'+x.searchParams.get('channel');const c=x.pathname.match(/^\/channel\/(UC[\w-]{22})/);if(c)return 'ch:'+c[1];const m=x.pathname.match(/^\/(live|embed|shorts)\/([\w-]+)/);return m?m[2]:null}}catch(e){}return null}
+  if(x.searchParams.get('channel'))return 'ch:'+x.searchParams.get('channel');
+  // === NEW: Support @handle and @handle/streams URLs ===
+  const handleMatch = x.pathname.match(/^\/@([\w.-]+)/);
+  if (handleMatch) {
+    const mapped = YT_HANDLES[handleMatch[1].toLowerCase()];
+    if (mapped) return 'ch:' + mapped;
+  }
+  // === END NEW ===
+  const c=x.pathname.match(/^\/channel\/(UC[\w-]{22})/);if(c)return 'ch:'+c[1];const m=x.pathname.match(/^\/(live|embed|shorts)\/([\w-]+)/);return m?m[2]:null}}catch(e){}return null}
 function tile(name){let h=0;for(const ch of name)h=(h*31+ch.charCodeAt(0))%360;
  const w=name.split(/\s+/);const ini=(w.length>1?w[0][0]+w[1][0]:name.slice(0,3)).toUpperCase();
  return `<div class="logo" style="background:hsl(${h} 42% 34%)">${ini}</div>`}
@@ -212,14 +274,45 @@ function renderChips(){const cats=['All','Favourites',...new Set(all().map(c=>c.
 function renderList(){const a=all(),v=visible();
  $('list').innerHTML=v.length?v.map(c=>`<button class="ch ${cur&&cur.id===c.id?'on':''}" data-id="${c.id}"><span class="n">${a.indexOf(c)+1}</span>${tile(c.name)}<span class="t"><b>${esc(c.name)}</b><small>${esc(c.cat)}</small></span>${edit?'<span class="mv"><span data-m="top" role="button" aria-label="Move to top" title="Move to top">⤒</span><span data-m="-1" role="button" aria-label="Move up">▲</span><span data-m="1" role="button" aria-label="Move down">▼</span></span>':`<span class="heart ${S.favs.includes(c.id)?'f':''}" data-h="${c.id}" role="button" aria-label="Favourite">${S.favs.includes(c.id)?'♥':'♡'}</span>`}</button>`).join(''):'<div class="empty">No channels here yet. Use “+ Add” to paste a livestream link.</div>'}
 
+// === NEW: Helper to build the YouTube iframe HTML ===
+function buildYtIframe(cur, videoOrChParam, user) {
+  const vq = {1080:'hd1080',720:'hd720',480:'large'}[S.q];
+  return `<iframe title="${esc(cur.name)}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen src="https://www.youtube.com/embed/${videoOrChParam}autoplay=1&rel=0&playsinline=1${vq?'&vq='+vq+'&hd=1':''}${first&&!user?'&mute=1':''}"></iframe>`;
+}
+// === END NEW ===
+
 function play(id,user){const a=all();cur=a.find(c=>c.id===id)||a[0];if(!cur){$('video').innerHTML='<div class="ext"><p>No channels left. Add one to start watching.</p></div>';return}
  S.last=cur.id;save();
  $('inum').textContent=a.indexOf(cur)+1;$('iname').textContent=cur.name;$('idesc').textContent=cur.cat+' · '+cur.desc;
  $('open').href=cur.url;$('fav').textContent=S.favs.includes(cur.id)?'♥':'♡';
  const y=ytId(cur.url),v=$('video');
  $('qual').disabled=!y;
- if(y){const vq={1080:'hd1080',720:'hd720',480:'large'}[S.q];
-  v.innerHTML=`<iframe title="${esc(cur.name)}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen src="https://www.youtube.com/embed/${y.startsWith('ch:')?'live_stream?channel='+y.slice(3)+'&':y+'?'}autoplay=1&rel=0&playsinline=1${vq?'&vq='+vq+'&hd=1':''}${first&&!user?'&mute=1':''}"></iframe>`}
+ if(y){
+  // === NEW: For channel-based streams (like 8world), try resolving today's scheduled stream Video ID first ===
+  if (y.startsWith('ch:')) {
+    const chId = y.slice(3);
+    const is8world = (chId === 'UCUqUtr0w-K8W4AfpbHiYSaQ');
+    const streamsPage = is8world ? 'https://www.youtube.com/@8worldSG/streams' : `https://www.youtube.com/channel/${chId}/streams`;
+    v.innerHTML = buildYtIframe(cur, `live_stream?channel=${chId}&`, user) +
+      `<div class="stream-bar" id="sbar"><span>${is8world ? '8world Live (6:30pm / 10pm SGT)' : 'Channel Live'}</span><button id="find-vid">Find Latest Stream</button><a href="${streamsPage}" target="_blank" rel="noopener">All Streams ↗</a></div>`;
+
+    const tryResolve = async () => {
+      const bar = $('sbar');
+      if (bar) bar.querySelector('span').textContent = 'Searching today’s broadcast…';
+      const vid = await resolveChannelLiveVideoId(chId, is8world);
+      if (vid && cur && ytId(cur.url) === y) {
+        v.innerHTML = buildYtIframe(cur, `${vid}?`, user);
+      } else if (bar) {
+        bar.querySelector('span').textContent = is8world ? 'No active 6:30pm / 10pm stream found right now' : 'No active stream found';
+      }
+    };
+    $('find-vid').onclick = tryResolve;
+    if (is8world) tryResolve();
+  } else {
+    v.innerHTML = buildYtIframe(cur, `${y}?`, user);
+  }
+  // === END NEW ===
+ }
  else v.innerHTML=`<div class="ext"><h2>${esc(cur.name)}</h2><p>${esc(cur.desc)} This broadcaster doesn’t allow its stream to be embedded, so it plays on its own site.</p><a class="go" href="${esc(cur.url)}" target="_blank" rel="noopener">Watch on ${esc(new URL(cur.url).hostname.replace('www.',''))}</a></div>`;
  first=false;renderList();hud()}
 
@@ -248,7 +341,12 @@ $('modal').onclick=e=>{if(e.target===$('modal'))closeM()};
 $('f-url').onblur=()=>{if(!$('f-name').value){try{const h=new URL($('f-url').value).hostname.replace('www.','');if(!ytId($('f-url').value))$('f-name').value=h.split('.')[0]}catch(e){}}};
 $('save').onclick=()=>{const raw=$('f-url').value.trim();if(/<video/i.test(raw)){$('err').textContent='That video code only works inside your own tab. Paste the channel page link instead.';return}
  const m=raw.match(/src="([^"]+)"/),url=/^UC[\w-]{22}$/.test(raw)?'https://www.youtube.com/channel/'+raw:m?m[1]:raw,name=$('f-name').value.trim();
- if(/youtube\.com\/(@|c\/|user\/)/.test(url)){$('err').textContent='That is a channel name link. Open the channel’s About tab, copy its channel ID (starts with UC) and paste that instead.';return}
+ // === NEW: Allow @handle URLs if they are in YT_HANDLES (like @8worldSG) ===
+ const handleCheck = url.match(/youtube\.com\/@([\w.-]+)/i);
+ if (handleCheck && YT_HANDLES[handleCheck[1].toLowerCase()]) {
+   // Known handle — let it pass!
+ } else if(/youtube\.com\/(@|c\/|user\/)/.test(url)){$('err').textContent='That is a channel name link. Open the channel’s About tab, copy its channel ID (starts with UC) and paste that instead.';return}
+ // === END NEW ===
  try{const u=new URL(url);if(!/^https?:$/.test(u.protocol))throw 0}catch(e){$('err').textContent='Paste a full link starting with https://';return}
  if(!name){$('err').textContent='Give the channel a name.';return}
  const c={id:'u'+Date.now(),name,cat:$('f-cat').value.trim()||'Other',url,desc:$('f-desc').value.trim()||'Added by me.'};
